@@ -72,6 +72,16 @@ export default function App() {
     ))
   }, [setPlaylists])
 
+  const reorderPlaylist = useCallback((plId, fromIndex, toIndex) => {
+    setPlaylists(prev => prev.map(p => {
+      if (p.id !== plId) return p
+      const items = [...p.items]
+      const [moved] = items.splice(fromIndex, 1)
+      items.splice(toIndex, 0, moved)
+      return { ...p, items }
+    }))
+  }, [setPlaylists])
+
   const currentScore = scores.find(s => s.id === currentScoreId)
 
   if (view === 'reader' && currentScoreId) {
@@ -118,6 +128,7 @@ export default function App() {
       onCreatePlaylist={createPlaylist}
       onAddToPlaylist={addToPlaylist}
       onRemoveFromPlaylist={removeFromPlaylist}
+      onReorderPlaylist={reorderPlaylist}
     />
   )
 }

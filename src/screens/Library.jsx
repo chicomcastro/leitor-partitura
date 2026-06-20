@@ -55,11 +55,12 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove })
 export default function Library({
   scores, playlists, activePlaylist, setActivePlaylist,
   onOpenScore, onImport, onDelete, onCreatePlaylist, onAddToPlaylist, onRemoveFromPlaylist,
+  onReorderPlaylist,
 }) {
   const fileRef = useRef(null)
   const [modal, setModal] = useState(null)
-
   const [searchQuery, setSearchQuery] = useState('')
+  const dragRef = useRef(null)
 
   const inPlaylist = activePlaylist != null
   const activePl = playlists.find(p => p.id === activePlaylist)
@@ -144,16 +145,30 @@ export default function Library({
 
         {visibleScores.length > 0 ? (
           <div className={s.grid}>
-            {visibleScores.map(score => (
-              <ScoreCard
+            {visibleScores.map((score, idx) => (
+              <div
                 key={score.id}
-                score={score}
-                inPlaylist={inPlaylist}
-                onOpen={onOpenScore}
-                onDelete={onDelete}
-                onAddOpen={(id) => setModal({ type: 'add', scoreId: id })}
-                onRemove={(id) => onRemoveFromPlaylist(activePlaylist, id)}
-              />
+                draggable={inPlaylist}
+                onDragStart={() => { dragRef.current = idx }}
+                onDragOver={(e) => { if (inPlaylist) e.preventDefault() }}
+                onDrop={() => {
+                  if (inPlaylist && dragRef.current !== null && dragRef.current !== idx) {
+                    onReorderPlaylist(activePlaylist, dragRef.current, idx)
+                  }
+                  dragRef.current = null
+                }}
+                onDragEnd={() => { dragRef.current = null }}
+                style={inPlaylist ? { cursor: 'grab' } : undefined}
+              >
+                <ScoreCard
+                  score={score}
+                  inPlaylist={inPlaylist}
+                  onOpen={onOpenScore}
+                  onDelete={onDelete}
+                  onAddOpen={(id) => setModal({ type: 'add', scoreId: id })}
+                  onRemove={(id) => onRemoveFromPlaylist(activePlaylist, id)}
+                />
+              </div>
             ))}
           </div>
         ) : (
