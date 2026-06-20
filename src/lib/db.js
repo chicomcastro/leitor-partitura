@@ -38,6 +38,26 @@ export async function idbGet(store, key) {
   })
 }
 
+export async function idbGetAll(storeName) {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly')
+    const store = tx.objectStore(storeName)
+    const entries = []
+    const req = store.openCursor()
+    req.onsuccess = () => {
+      const cursor = req.result
+      if (cursor) {
+        entries.push({ key: cursor.key, value: cursor.value })
+        cursor.continue()
+      } else {
+        resolve(entries)
+      }
+    }
+    req.onerror = () => reject(req.error)
+  })
+}
+
 export async function idbDel(store, key) {
   const db = await openDB()
   return new Promise((resolve, reject) => {

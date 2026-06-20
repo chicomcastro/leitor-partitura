@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { idbGet } from '../lib/db'
 import { getPdfDoc } from '../lib/pdf'
+import { exportBackup, importBackup } from '../lib/backup'
 import Modal from '../components/Modal'
 import Onboarding from '../components/Onboarding'
 import s from './Library.module.css'
@@ -97,10 +98,40 @@ export default function Library({
     .filter(Boolean)
     .filter(score => score.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
+  const handleBackup = useCallback(async () => {
+    try {
+      const blob = await exportBackup()
+      const date = new Date().toISOString().slice(0, 10)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `estante-backup-${date}.estante`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('backup export failed', err)
+      alert('Erro ao exportar backup.')
+    }
+  }, [])
+
   const handleFiles = useCallback(async (e) => {
     const files = Array.from(e.target.files || [])
     e.target.value = ''
-    if (files.length) onImport(files)
+    if (!files.length) return
+    const estanteFile = files.find(f => f.name.endsWith('.estante'))
+    if (estanteFile) {
+      try {
+        await importBackup(estanteFile)
+        window.location.reload()
+      } catch (err) {
+        console.error('backup import failed', err)
+        alert('Erro ao importar backup.')
+      }
+      return
+    }
+    onImport(files)
   }, [onImport])
 
   const tabs = [
@@ -121,6 +152,10 @@ export default function Library({
           </div>
         </div>
         <div className={s.actions}>
+          <button className={s.btnSecondary} onClick={handleBackup}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg>
+            Backup
+          </button>
           <button className={s.btnSecondary} onClick={() => setModal({ type: 'playlist' })}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
             Nova playlist
@@ -129,7 +164,7 @@ export default function Library({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2M11,15V12H9V15H6V17H9V20H11V17H14V15H11Z" /></svg>
             Importar
           </button>
-          <input type="file" accept="application/pdf,image/*" multiple ref={fileRef} onChange={handleFiles} style={{ display: 'none' }} />
+          <input type="file" accept="application/pdf,image/*,.estante" multiple ref={fileRef} onChange={handleFiles} style={{ display: 'none' }} />
         </div>
       </div>
 
