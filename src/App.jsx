@@ -18,7 +18,8 @@ export default function App() {
   const [markersMap, setMarkersMap] = usePersistedState('sp.markers', {})
   const [recordingsMeta, setRecordingsMeta] = usePersistedState('sp.recordings', [])
   const [gestures, setGestures] = usePersistedState('sp.gestures', {
-    tapLeft: 'prev', tapRight: 'next', swipeLeft: 'next', swipeRight: 'prev',
+    tapLeft: 'prev', tapRight: 'next', tap2: 'metro', tap3: 'none',
+    swipeLeft: 'next', swipeRight: 'prev',
   })
   const [bpm, setBpm] = usePersistedState('sp.bpm', 90)
   const [beats, setBeats] = usePersistedState('sp.beats', 4)

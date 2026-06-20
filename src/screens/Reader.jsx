@@ -265,25 +265,70 @@ export default function Reader({
     }
   }, [nextPage, prevPage, toggleAutoscroll, metro, recorder, goBackJump])
 
-  // pointer gestures
+  // touch + pointer gestures
   useEffect(() => {
     const v = viewerRef.current
     if (!v) return
+    let touchState = null
+
+    const onTouchStart = (e) => {
+      if (annotating) return
+      const t = e.touches
+      if (!touchState) {
+        touchState = {
+          startX: t[0].clientX, startY: t[0].clientY,
+          t0: Date.now(), maxFingers: t.length,
+        }
+      }
+      if (t.length > touchState.maxFingers) touchState.maxFingers = t.length
+    }
+
+    const onTouchEnd = (e) => {
+      if (!touchState || annotating) return
+      if (e.touches.length > 0) return
+      const { startX, startY, t0, maxFingers } = touchState
+      const endX = e.changedTouches[0].clientX
+      const endY = e.changedTouches[0].clientY
+      const dx = endX - startX
+      const dy = endY - startY
+      const dt = Date.now() - t0
+      touchState = null
+
+      if (maxFingers >= 3 && Math.abs(dx) < 40 && Math.abs(dy) < 40 && dt < 500) {
+        doAction(gestures.tap3 || 'none'); return
+      }
+      if (maxFingers === 2 && Math.abs(dx) < 40 && Math.abs(dy) < 40 && dt < 500) {
+        doAction(gestures.tap2 || 'none'); return
+      }
+      if (maxFingers === 1 && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.2 && dt < 700) {
+        doAction(gestures[dx < 0 ? 'swipeLeft' : 'swipeRight']); return
+      }
+      if (maxFingers === 1 && Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 400) {
+        const rect = v.getBoundingClientRect()
+        const rx = (endX - rect.left) / rect.width
+        if (rx < 0.30) doAction(gestures.tapLeft)
+        else if (rx > 0.70) doAction(gestures.tapRight)
+        else setChromeVisible(c => !c)
+      }
+    }
+
+    // mouse fallback for desktop
     const onDown = (e) => {
       if (annotating && e.target.dataset.annPage) return
+      if (e.pointerType === 'touch') return
       pointerRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
     }
     const onUp = (e) => {
       if (!pointerRef.current) return
       if (annotating && e.target.dataset.annPage) return
+      if (e.pointerType === 'touch') { pointerRef.current = null; return }
       const dx = e.clientX - pointerRef.current.x
       const dy = e.clientY - pointerRef.current.y
       const dt = Date.now() - pointerRef.current.t
       pointerRef.current = null
 
       if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.2 && dt < 700) {
-        doAction(gestures[dx < 0 ? 'swipeLeft' : 'swipeRight'])
-        return
+        doAction(gestures[dx < 0 ? 'swipeLeft' : 'swipeRight']); return
       }
       if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 400) {
         const rect = v.getBoundingClientRect()
@@ -293,9 +338,17 @@ export default function Reader({
         else setChromeVisible(c => !c)
       }
     }
+
+    v.addEventListener('touchstart', onTouchStart, { passive: true })
+    v.addEventListener('touchend', onTouchEnd)
     v.addEventListener('pointerdown', onDown)
     v.addEventListener('pointerup', onUp)
-    return () => { v.removeEventListener('pointerdown', onDown); v.removeEventListener('pointerup', onUp) }
+    return () => {
+      v.removeEventListener('touchstart', onTouchStart)
+      v.removeEventListener('touchend', onTouchEnd)
+      v.removeEventListener('pointerdown', onDown)
+      v.removeEventListener('pointerup', onUp)
+    }
   }, [gestures, doAction, annotating])
 
   // keyboard

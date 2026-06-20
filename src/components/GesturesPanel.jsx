@@ -6,6 +6,8 @@ const CLOSE_ICON = 'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.4
 const GESTURE_DEFS = [
   { key: 'tapLeft', labelKey: 'gestures.tapLeft', icon: 'M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z' },
   { key: 'tapRight', labelKey: 'gestures.tapRight', icon: 'M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z' },
+  { key: 'tap2', labelKey: 'gestures.tap2', icon: 'M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3Z' },
+  { key: 'tap3', labelKey: 'gestures.tap3', icon: 'M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z' },
   { key: 'swipeLeft', labelKey: 'gestures.swipeLeft', icon: 'M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z' },
   { key: 'swipeRight', labelKey: 'gestures.swipeRight', icon: 'M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z' },
 ]
