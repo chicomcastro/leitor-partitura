@@ -188,14 +188,18 @@
   overflow: hidden;
   background: var(--paper);
   box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .thumbCanvas {
   width: 100%;
-  height: auto;
-  min-height: 200px;
+  height: 100%;
   display: block;
   background: var(--paper);
+  object-fit: contain;
 }
 
 .cardName {

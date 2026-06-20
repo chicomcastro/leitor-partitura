@@ -48,7 +48,7 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t
       <div className={s.cardThumb} onClick={() => onOpen(score.id)}>
         <div className={s.thumbWrap}>
           {score.type === 'image'
-            ? <img src={imgUrl} className={s.thumbCanvas} alt={score.name} style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+            ? <img src={imgUrl} className={s.thumbCanvas} alt={score.name} />
             : <canvas ref={canvasRef} className={s.thumbCanvas} />
           }
         </div>
