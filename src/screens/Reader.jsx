@@ -110,7 +110,8 @@ export default function Reader({
             const line1 = document.createElement('div')
             line1.style.cssText = 'flex:1;height:1px;background:var(--border-light);'
             const label = document.createElement('span')
-            label.textContent = ps.name
+            const rangeStr = (ps.fromPage || ps.toPage) ? ` (p. ${ps.fromPage || 1}–${ps.toPage || '∞'})` : ''
+            label.textContent = ps.name + rangeStr
             const line2 = document.createElement('div')
             line2.style.cssText = 'flex:1;height:1px;background:var(--border-light);'
             divider.appendChild(line1)
@@ -138,10 +139,13 @@ export default function Reader({
           } else {
             const doc = await getPdfDoc(ps.id, getBuffer)
             if (cancelled) return
-            const n = doc.numPages
+            const pFrom = ps.fromPage || 1
+            const pTo = ps.toPage || doc.numPages
             let currentRow = null
+            let localIdx = 0
 
-            for (let p = 1; p <= n; p++) {
+            for (let p = pFrom; p <= pTo; p++) {
+              localIdx++
               globalPage++
               const page = await doc.getPage(p)
               const vp = page.getViewport({ scale: 1 })
@@ -158,7 +162,7 @@ export default function Reader({
               wrap.style.cssText = `width:${w}px;height:${h}px;background:var(--paper);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.5);position:relative;overflow:hidden;`
 
               if (isDual) {
-                const needsNewRow = p === 1 || (p > 1 && p % 2 === 0)
+                const needsNewRow = localIdx === 1 || localIdx % 2 === 0
                 if (needsNewRow) {
                   currentRow = document.createElement('div')
                   currentRow.style.cssText = 'display:flex;justify-content:center;gap:16px;margin:0 auto 16px auto;'
@@ -174,7 +178,7 @@ export default function Reader({
 
               wrappersRef.current.push({ i: globalPage, wrap, page, scale })
             }
-            scoreRangesRef.current.push({ scoreId: ps.id, offset, count: n, name: ps.name })
+            scoreRangesRef.current.push({ scoreId: ps.id, offset, count: pTo - pFrom + 1, name: ps.name })
             if (ps.id === scoreId) initialScrollTarget = offset + 1
           }
         }

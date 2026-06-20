@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { idbGet } from '../lib/db'
 import { getPdfDoc } from '../lib/pdf'
-import { exportBackup, importBackup } from '../lib/backup'
+import { exportBackup, importBackup, exportPlaylist } from '../lib/backup'
 import { useI18n } from '../lib/i18n'
 import Modal from '../components/Modal'
 import Onboarding from '../components/Onboarding'
@@ -9,7 +9,7 @@ import s from './Library.module.css'
 
 const VIEW_MODES = ['grid-sm', 'grid-md', 'grid-lg', 'list']
 
-function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t, viewMode }) {
+function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, onRemove, t, viewMode }) {
   const canvasRef = useRef(null)
   const drawnRef = useRef(null)
   const [imgUrl, setImgUrl] = useState(null)
@@ -55,13 +55,17 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t
     </div>
   )
 
+  const pagesLabel = pageRange
+    ? `p. ${pageRange.from}–${pageRange.to}`
+    : `${score.pages} ${score.pages === 1 ? t('library.page') : t('library.pages')}`
+
   const actions = (
     <>
       <button className={s.iconBtnPlaylist} onClick={(e) => { e.stopPropagation(); onAddOpen(score.id) }} title={t('library.addToPlaylist')} aria-label={t('library.addToPlaylist')}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
       </button>
-      {inPlaylist && (
-        <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); onRemove(score.id) }} title={t('library.removeFromPlaylist')} aria-label={t('library.removeFromPlaylist')}>
+      {inPlaylist && onRemove && (
+        <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); onRemove() }} title={t('library.removeFromPlaylist')} aria-label={t('library.removeFromPlaylist')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,13H5V11H19V13Z" /></svg>
         </button>
       )}
@@ -77,7 +81,7 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t
         <div className={s.listThumb}>{thumb}</div>
         <div className={s.listInfo}>
           <div className={s.listName}>{score.name}</div>
-          <div className={s.cardPages}>{score.pages} {score.pages === 1 ? t('library.page') : t('library.pages')}</div>
+          <div className={s.cardPages}>{pagesLabel}</div>
         </div>
         <div className={s.listActions} onClick={e => e.stopPropagation()}>{actions}</div>
       </div>
@@ -89,7 +93,7 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t
       <div className={s.cardThumb} onClick={() => onOpen(score.id)}>
         {thumb}
         <div className={s.cardName}>{score.name}</div>
-        <div className={s.cardPages}>{score.pages} {score.pages === 1 ? t('library.page') : t('library.pages')}</div>
+        <div className={s.cardPages}>{pagesLabel}</div>
       </div>
       <div className={s.cardActions}>{actions}</div>
     </div>
@@ -97,9 +101,9 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t
 }
 
 export default function Library({
-  scores, playlists, activePlaylist, setActivePlaylist,
-  onOpenScore, onImport, onDelete, onCreatePlaylist, onAddToPlaylist, onRemoveFromPlaylist,
-  onReorderPlaylist,
+  scores, setScores, playlists, setPlaylists, activePlaylist, setActivePlaylist,
+  onOpenScore, onImport, onDelete, onCreatePlaylist, onDeletePlaylist,
+  onAddToPlaylist, onRemoveFromPlaylist, onReorderPlaylist,
 }) {
   const { t, locale, changeLocale, LOCALES } = useI18n()
   const fileRef = useRef(null)
@@ -135,13 +139,22 @@ export default function Library({
 
   const inPlaylist = activePlaylist != null
   const activePl = playlists.find(p => p.id === activePlaylist)
-  const visibleIds = inPlaylist
-    ? (activePl ? activePl.items.filter(id => scores.some(s => s.id === id)) : [])
-    : scores.map(s => s.id)
-  const visibleScores = visibleIds
-    .map(id => scores.find(s => s.id === id))
-    .filter(Boolean)
-    .filter(score => score.name.toLowerCase().includes(searchQuery.toLowerCase()))
+
+  // Build visible items — in playlist mode, one entry per playlist item (supports page ranges + duplicates)
+  const visibleItems = inPlaylist
+    ? (activePl ? activePl.items.map((item, idx) => {
+        const score = scores.find(s => s.id === item.scoreId)
+        if (!score) return null
+        const pageRange = (item.fromPage || item.toPage)
+          ? { from: item.fromPage || 1, to: item.toPage || score.pages }
+          : null
+        return { score, pageRange, itemIndex: idx }
+      }).filter(Boolean) : [])
+    : scores.map(s => ({ score: s, pageRange: null, itemIndex: null }))
+
+  const filteredItems = visibleItems.filter(v =>
+    v.score.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   const handleBackup = useCallback(async () => {
     try {
@@ -168,7 +181,10 @@ export default function Library({
     const estanteFile = files.find(f => f.name.endsWith('.estante'))
     if (estanteFile) {
       try {
-        await importBackup(estanteFile)
+        const result = await importBackup(estanteFile)
+        if (result?.type === 'playlist') {
+          alert(t('library.playlistImported'))
+        }
         window.location.reload()
       } catch (err) {
         console.error('backup import failed', err)
@@ -184,6 +200,41 @@ export default function Library({
     const nextIdx = (currentIdx + 1) % LOCALES.length
     changeLocale(LOCALES[nextIdx].code)
   }, [locale, changeLocale, LOCALES])
+
+  const playPlaylist = useCallback((plId) => {
+    setActivePlaylist(plId)
+    const pl = playlists.find(p => p.id === plId)
+    if (pl && pl.items.length > 0) {
+      onOpenScore(pl.items[0].scoreId || pl.items[0])
+    }
+  }, [playlists, setActivePlaylist, onOpenScore])
+
+  const sharePlaylist = useCallback(async (plId) => {
+    const pl = playlists.find(p => p.id === plId)
+    if (!pl) return
+    try {
+      const blob = await exportPlaylist(pl, scores)
+      const file = new File([blob], `${pl.name}.estante`, { type: 'application/octet-stream' })
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: pl.name })
+      } else {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = file.name
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('share failed', err)
+        alert(t('library.shareError'))
+      }
+    }
+  }, [playlists, scores, t])
 
   const tabs = [
     { id: null, name: t('library.allScores'), count: scores.length },
@@ -246,6 +297,22 @@ export default function Library({
         ))}
       </div>
 
+      {inPlaylist && activePl && (
+        <div className={s.playlistBar}>
+          <button className={s.playBtn} onClick={() => playPlaylist(activePl.id)} disabled={activePl.items.length === 0}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>
+            {t('library.play')}
+          </button>
+          <button className={s.shareBtn} onClick={() => sharePlaylist(activePl.id)} disabled={activePl.items.length === 0}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.61 20.92,19C20.92,17.39 19.61,16.08 18,16.08Z" /></svg>
+            {t('library.share')}
+          </button>
+          <button className={s.deletePlaylistBtn} onClick={() => { if (confirm(t('library.deletePlaylist') + '?')) onDeletePlaylist(activePl.id) }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
+          </button>
+        </div>
+      )}
+
       <div className={s.content} role="main">
         <div className={s.searchWrap}>
           <div style={{ position: 'relative', flex: 1 }}>
@@ -277,18 +344,20 @@ export default function Library({
           </button>
         </div>
 
-        {visibleScores.length > 0 ? (
+        {filteredItems.length > 0 ? (
           <div className={`${viewMode === 'list' ? s.list : s.grid} ${s[viewMode.replace('-', '')]}`} role="list" aria-label={t('library.scores')}>
-            {visibleScores.map((score, idx) => (
+            {filteredItems.map((item, idx) => (
               <div
-                key={score.id}
+                key={inPlaylist ? `${item.score.id}_${item.itemIndex}` : item.score.id}
                 role="listitem"
                 draggable={inPlaylist}
-                onDragStart={() => { dragRef.current = idx }}
+                onDragStart={() => { dragRef.current = item.itemIndex ?? idx }}
                 onDragOver={(e) => { if (inPlaylist) e.preventDefault() }}
                 onDrop={() => {
-                  if (inPlaylist && dragRef.current !== null && dragRef.current !== idx) {
-                    onReorderPlaylist(activePlaylist, dragRef.current, idx)
+                  const fromIdx = dragRef.current
+                  const toIdx = item.itemIndex ?? idx
+                  if (inPlaylist && fromIdx !== null && fromIdx !== toIdx) {
+                    onReorderPlaylist(activePlaylist, fromIdx, toIdx)
                   }
                   dragRef.current = null
                 }}
@@ -296,12 +365,13 @@ export default function Library({
                 style={inPlaylist ? { cursor: 'grab' } : undefined}
               >
                 <ScoreCard
-                  score={score}
+                  score={item.score}
                   inPlaylist={inPlaylist}
+                  pageRange={item.pageRange}
                   onOpen={onOpenScore}
                   onDelete={onDelete}
-                  onAddOpen={(id) => setModal({ type: 'add', scoreId: id })}
-                  onRemove={(id) => onRemoveFromPlaylist(activePlaylist, id)}
+                  onAddOpen={(id) => setModal({ type: 'add', scoreId: id, totalPages: item.score.pages })}
+                  onRemove={item.itemIndex != null ? () => onRemoveFromPlaylist(activePlaylist, item.itemIndex) : null}
                   t={t}
                   viewMode={viewMode}
                 />
@@ -337,16 +407,16 @@ export default function Library({
       )}
 
       {modal?.type === 'add' && (
-        <Modal
-          title={t('library.addToPlaylist')}
+        <AddToPlaylistModal
+          playlists={playlists}
+          scoreId={modal.scoreId}
+          totalPages={modal.totalPages || 1}
+          onAdd={(plId, from, to) => {
+            onAddToPlaylist(plId, modal.scoreId, from || undefined, to || undefined)
+            setModal(null)
+          }}
           onClose={() => setModal(null)}
-          list={playlists.map(p => ({
-            id: p.id,
-            label: p.name,
-            active: p.items.includes(modal.scoreId),
-          }))}
-          onSelect={(plId) => { onAddToPlaylist(plId, modal.scoreId) }}
-          emptyText={t('library.noPlaylists')}
+          t={t}
         />
       )}
 
@@ -356,6 +426,81 @@ export default function Library({
           onImport={() => { dismissOnboarding(); fileRef.current?.click() }}
         />
       )}
+    </div>
+  )
+}
+
+function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onClose, t }) {
+  const [selectedPl, setSelectedPl] = useState(null)
+  const [fromPage, setFromPage] = useState('')
+  const [toPage, setToPage] = useState('')
+  const hasRange = totalPages > 1
+
+  return (
+    <div className={s.modalBackdrop} onClick={onClose}>
+      <div className={s.modalPanel} onClick={e => e.stopPropagation()}>
+        <div className={s.modalTitle}>{t('library.addToPlaylist')}</div>
+
+        {playlists.length > 0 ? (
+          <>
+            <div className={s.modalList}>
+              {playlists.map(p => (
+                <button
+                  key={p.id}
+                  className={`${s.modalListBtn} ${selectedPl === p.id ? s.modalListBtnActive : ''}`}
+                  onClick={() => setSelectedPl(p.id)}
+                >
+                  {p.name}
+                  {p.items.some(item => (item.scoreId || item) === scoreId) ? ' ✓' : ''}
+                </button>
+              ))}
+            </div>
+
+            {hasRange && selectedPl && (
+              <div className={s.pageRangeRow}>
+                <span className={s.pageRangeLabel}>{t('library.fromPage')}</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  placeholder="1"
+                  className={s.pageRangeInput}
+                  value={fromPage}
+                  onChange={e => setFromPage(e.target.value)}
+                />
+                <span className={s.pageRangeLabel}>{t('library.toPage')}</span>
+                <input
+                  type="number"
+                  min={fromPage || 1}
+                  max={totalPages}
+                  placeholder={String(totalPages)}
+                  className={s.pageRangeInput}
+                  value={toPage}
+                  onChange={e => setToPage(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className={s.modalFooter}>
+              <button className={s.modalCancelBtn} onClick={onClose}>{t('modal.cancel')}</button>
+              <button
+                className={s.modalSaveBtn}
+                disabled={!selectedPl}
+                onClick={() => {
+                  if (!selectedPl) return
+                  const from = fromPage ? Math.max(1, Math.min(totalPages, +fromPage)) : null
+                  const to = toPage ? Math.max(from || 1, Math.min(totalPages, +toPage)) : null
+                  onAdd(selectedPl, from, to)
+                }}
+              >
+                {t('library.add')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className={s.modalEmpty}>{t('library.noPlaylists')}</div>
+        )}
+      </div>
     </div>
   )
 }

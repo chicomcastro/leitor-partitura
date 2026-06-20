@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { usePersistedState } from './hooks/usePersistedState'
 import { idbPut, idbDel } from './lib/db'
 import { idbGet } from './lib/db'
@@ -25,6 +25,17 @@ export default function App() {
   const [beats, setBeats] = usePersistedState('sp.beats', 4)
   const [scrollSpeed, setScrollSpeed] = usePersistedState('sp.speed', 45)
   const [fitMode, setFitMode] = usePersistedState('sp.fit', 'page')
+
+  // Migrate old string-based playlist items to objects
+  useEffect(() => {
+    const needs = playlists.some(p => p.items.some(item => typeof item === 'string'))
+    if (needs) {
+      setPlaylists(playlists.map(p => ({
+        ...p,
+        items: p.items.map(item => typeof item === 'string' ? { scoreId: item } : item)
+      })))
+    }
+  }, [])
 
   const openScore = useCallback((id) => {
     setCurrentScoreId(id)
@@ -56,7 +67,10 @@ export default function App() {
 
   const deleteScore = useCallback((id) => {
     setScores(prev => prev.filter(s => s.id !== id))
-    setPlaylists(prev => prev.map(p => ({ ...p, items: p.items.filter(x => x !== id) })))
+    setPlaylists(prev => prev.map(p => ({
+      ...p,
+      items: p.items.filter(item => (item.scoreId || item) !== id)
+    })))
     setMarkersMap(prev => { const next = { ...prev }; delete next[id]; return next })
     idbDel('pdfs', id)
     evictDoc(id)
@@ -66,17 +80,23 @@ export default function App() {
     setPlaylists(prev => [...prev, { id: 'pl' + Date.now(), name, items: [] }])
   }, [setPlaylists])
 
-  const addToPlaylist = useCallback((plId, scoreId) => {
+  const deletePlaylist = useCallback((plId) => {
+    setPlaylists(prev => prev.filter(p => p.id !== plId))
+    setActivePlaylist(prev => prev === plId ? null : prev)
+  }, [setPlaylists, setActivePlaylist])
+
+  const addToPlaylist = useCallback((plId, scoreId, fromPage, toPage) => {
+    const item = { scoreId }
+    if (fromPage != null) item.fromPage = fromPage
+    if (toPage != null) item.toPage = toPage
     setPlaylists(prev => prev.map(p =>
-      p.id === plId
-        ? (p.items.includes(scoreId) ? p : { ...p, items: [...p.items, scoreId] })
-        : p
+      p.id === plId ? { ...p, items: [...p.items, item] } : p
     ))
   }, [setPlaylists])
 
-  const removeFromPlaylist = useCallback((plId, scoreId) => {
+  const removeFromPlaylist = useCallback((plId, itemIndex) => {
     setPlaylists(prev => prev.map(p =>
-      p.id === plId ? { ...p, items: p.items.filter(x => x !== scoreId) } : p
+      p.id === plId ? { ...p, items: p.items.filter((_, i) => i !== itemIndex) } : p
     ))
   }, [setPlaylists])
 
@@ -95,7 +115,11 @@ export default function App() {
   if (view === 'reader' && currentScoreId) {
     const pl = playlists.find(p => p.id === activePlaylist)
     const playlistScores = pl
-      ? pl.items.map(id => scores.find(s => s.id === id)).filter(Boolean)
+      ? pl.items.map(item => {
+          const score = scores.find(s => s.id === item.scoreId)
+          if (!score) return null
+          return { ...score, fromPage: item.fromPage, toPage: item.toPage }
+        }).filter(Boolean)
       : null
     const markersKey = pl ? `pl_${pl.id}` : currentScoreId
 
@@ -137,13 +161,16 @@ export default function App() {
   return (
     <Library
       scores={scores}
+      setScores={setScores}
       playlists={playlists}
+      setPlaylists={setPlaylists}
       activePlaylist={activePlaylist}
       setActivePlaylist={setActivePlaylist}
       onOpenScore={openScore}
       onImport={importFiles}
       onDelete={deleteScore}
       onCreatePlaylist={createPlaylist}
+      onDeletePlaylist={deletePlaylist}
       onAddToPlaylist={addToPlaylist}
       onRemoveFromPlaylist={removeFromPlaylist}
       onReorderPlaylist={reorderPlaylist}
