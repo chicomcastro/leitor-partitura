@@ -33,6 +33,7 @@ export default function Reader({
   const [showRecordings, setShowRecordings] = useState(false)
   const [modal, setModal] = useState(null)
   const [accent, setAccent] = useState(true)
+  const [pageMode, setPageMode] = useState('full')
 
   const metro = useMetronome({ bpm, beats, accent })
   const scoreRecs = recordingsMeta.filter(r => r.scoreId === scoreId)
@@ -140,8 +141,18 @@ export default function Reader({
     if (o) v.scrollTo({ top: o.wrap.offsetTop - 16, behavior: 'smooth' })
   }, [currentPage])
 
-  const nextPage = useCallback(() => gotoPage(currentPage + 1), [gotoPage, currentPage])
-  const prevPage = useCallback(() => gotoPage(currentPage - 1), [gotoPage, currentPage])
+  const nextPage = useCallback(() => {
+    if (pageMode === 'half') {
+      const v = viewerRef.current
+      if (v) v.scrollBy({ top: v.clientHeight * 0.5, behavior: 'smooth' })
+    } else gotoPage(currentPage + 1)
+  }, [gotoPage, currentPage, pageMode])
+  const prevPage = useCallback(() => {
+    if (pageMode === 'half') {
+      const v = viewerRef.current
+      if (v) v.scrollBy({ top: -v.clientHeight * 0.5, behavior: 'smooth' })
+    } else gotoPage(currentPage - 1)
+  }, [gotoPage, currentPage, pageMode])
   const goBackJump = useCallback(() => {
     if (jumpStackRef.current.length) gotoPage(jumpStackRef.current.pop(), false)
   }, [gotoPage])
@@ -298,6 +309,10 @@ export default function Reader({
             <button className={s.fitBtn} onClick={() => setFitMode(fitMode === 'page' ? 'width' : 'page')}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z" /></svg>
               {fitMode === 'page' ? 'Página' : 'Largura'}
+            </button>
+            <button className={s.fitBtn} onClick={() => setPageMode(m => m === 'full' ? 'half' : 'full')}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z" /></svg>
+              {pageMode === 'full' ? 'Página inteira' : 'Meia página'}
             </button>
           </div>
 

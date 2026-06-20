@@ -59,12 +59,17 @@ export default function Library({
   const fileRef = useRef(null)
   const [modal, setModal] = useState(null)
 
+  const [searchQuery, setSearchQuery] = useState('')
+
   const inPlaylist = activePlaylist != null
   const activePl = playlists.find(p => p.id === activePlaylist)
   const visibleIds = inPlaylist
     ? (activePl ? activePl.items.filter(id => scores.some(s => s.id === id)) : [])
     : scores.map(s => s.id)
-  const visibleScores = visibleIds.map(id => scores.find(s => s.id === id)).filter(Boolean)
+  const visibleScores = visibleIds
+    .map(id => scores.find(s => s.id === id))
+    .filter(Boolean)
+    .filter(score => score.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   const handleFiles = useCallback(async (e) => {
     const files = Array.from(e.target.files || [])
@@ -115,6 +120,28 @@ export default function Library({
       </div>
 
       <div className={s.content}>
+        <div className={s.searchWrap}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <svg className={s.searchIcon} width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
+            </svg>
+            <input
+              className={s.searchInput}
+              type="text"
+              placeholder="Buscar partitura..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {searchQuery && (
+            <button className={s.searchClear} onClick={() => setSearchQuery('')} title="Limpar busca">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
+              </svg>
+            </button>
+          )}
+        </div>
+
         {visibleScores.length > 0 ? (
           <div className={s.grid}>
             {visibleScores.map(score => (
