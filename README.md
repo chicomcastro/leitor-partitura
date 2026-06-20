@@ -45,6 +45,14 @@ npm run build    # Production build in dist/
 npm run preview  # Preview the production build locally
 ```
 
+## Testing
+
+```bash
+npm run test:e2e   # Playwright E2E tests (requires Chromium)
+```
+
+Lighthouse CI runs automatically on every push and PR via GitHub Actions.
+
 ## Architecture
 
 ```
