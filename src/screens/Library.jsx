@@ -82,7 +82,16 @@ export default function Library({
   const [modal, setModal] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [onboardingSeen, setOnboardingSeen] = useState(() => localStorage.getItem('sp.onboarding') === '1')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
   const dragRef = useRef(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [menuOpen])
 
   const showOnboarding = scores.length === 0 && !onboardingSeen
   const dismissOnboarding = useCallback(() => {
@@ -160,14 +169,6 @@ export default function Library({
           </div>
         </div>
         <div className={s.actions}>
-          <button className={s.btnSecondary} onClick={toggleLocale} title={t('language')} aria-label={t('language')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V6H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z" /></svg>
-            {LOCALES.find(l => l.code === locale)?.flag || 'PT'}
-          </button>
-          <button className={s.btnSecondary} onClick={handleBackup}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg>
-            {t('library.backup')}
-          </button>
           <button className={s.btnSecondary} onClick={() => setModal({ type: 'playlist' })}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
             {t('library.newPlaylist')}
@@ -176,6 +177,23 @@ export default function Library({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2M11,15V12H9V15H6V17H9V20H11V17H14V15H11Z" /></svg>
             {t('library.import')}
           </button>
+          <div className={s.menuWrap} ref={menuRef}>
+            <button className={s.menuBtn} onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z" /></svg>
+            </button>
+            {menuOpen && (
+              <div className={s.menuDropdown}>
+                <button className={s.menuItem} onClick={() => { handleBackup(); setMenuOpen(false) }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg>
+                  {t('library.backup')}
+                </button>
+                <button className={s.menuItem} onClick={() => { toggleLocale(); setMenuOpen(false) }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V6H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z" /></svg>
+                  {t('language')}: {LOCALES.find(l => l.code === locale)?.flag || 'PT'}
+                </button>
+              </div>
+            )}
+          </div>
           <input type="file" accept="application/pdf,image/*,.estante" multiple ref={fileRef} onChange={handleFiles} style={{ display: 'none' }} />
         </div>
       </div>
