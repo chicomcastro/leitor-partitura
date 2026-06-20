@@ -54,16 +54,16 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove })
         <div className={s.cardPages}>{score.pages} {score.pages === 1 ? 'página' : 'páginas'}</div>
       </div>
       <div className={s.cardActions}>
-        <button className={s.iconBtnPlaylist} onClick={(e) => { e.stopPropagation(); onAddOpen(score.id) }} title="Adicionar à playlist">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
+        <button className={s.iconBtnPlaylist} onClick={(e) => { e.stopPropagation(); onAddOpen(score.id) }} title="Adicionar à playlist" aria-label="Adicionar à playlist">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
         </button>
         {inPlaylist && (
-          <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); onRemove(score.id) }} title="Remover da playlist">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H5V11H19V13Z" /></svg>
+          <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); onRemove(score.id) }} title="Remover da playlist" aria-label="Remover da playlist">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,13H5V11H19V13Z" /></svg>
           </button>
         )}
-        <button className={s.iconBtnDelete} onClick={(e) => { e.stopPropagation(); onDelete(score.id) }} title="Excluir">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
+        <button className={s.iconBtnDelete} onClick={(e) => { e.stopPropagation(); onDelete(score.id) }} title="Excluir" aria-label={`Excluir ${score.name}`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
         </button>
       </div>
     </div>
@@ -133,34 +133,37 @@ export default function Library({
         </div>
       </div>
 
-      <div className={s.tabs}>
+      <div className={s.tabs} role="tablist" aria-label="Filtrar por playlist">
         {tabs.map(t => (
           <button
             key={t.id ?? '__all'}
             className={`${s.tab} ${activePlaylist === t.id ? s.tabActive : s.tabInactive}`}
             onClick={() => setActivePlaylist(t.id)}
+            role="tab"
+            aria-selected={activePlaylist === t.id}
           >
             {t.name} &middot; {t.count}
           </button>
         ))}
       </div>
 
-      <div className={s.content}>
+      <div className={s.content} role="main">
         <div className={s.searchWrap}>
           <div style={{ position: 'relative', flex: 1 }}>
-            <svg className={s.searchIcon} width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <svg className={s.searchIcon} width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
             </svg>
             <input
               className={s.searchInput}
               type="text"
               placeholder="Buscar partitura..."
+              aria-label="Buscar partitura"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           {searchQuery && (
-            <button className={s.searchClear} onClick={() => setSearchQuery('')} title="Limpar busca">
+            <button className={s.searchClear} onClick={() => setSearchQuery('')} title="Limpar busca" aria-label="Limpar busca">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
               </svg>
@@ -169,10 +172,11 @@ export default function Library({
         </div>
 
         {visibleScores.length > 0 ? (
-          <div className={s.grid}>
+          <div className={s.grid} role="list" aria-label="Partituras">
             {visibleScores.map((score, idx) => (
               <div
                 key={score.id}
+                role="listitem"
                 draggable={inPlaylist}
                 onDragStart={() => { dragRef.current = idx }}
                 onDragOver={(e) => { if (inPlaylist) e.preventDefault() }}

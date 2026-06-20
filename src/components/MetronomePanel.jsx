@@ -29,16 +29,16 @@ export default function MetronomePanel({
           <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 1, marginTop: 2 }}>BPM</div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '18px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '18px 0' }} aria-label={`Indicador de batidas: ${beats} tempos`} role="group">
           {metroBeats.map((b, i) => (
-            <div key={i} style={{ width: b.sz, height: b.sz, borderRadius: '50%', background: b.col, transition: 'all .08s' }} />
+            <div key={i} style={{ width: b.sz, height: b.sz, borderRadius: '50%', background: b.col, transition: 'all .08s' }} aria-label={`Tempo ${i + 1}${running && i === currentBeat ? ', ativo' : ''}`} />
           ))}
         </div>
 
-        <input type="range" min="40" max="240" step="1" value={bpm} onChange={e => setBpm(+e.target.value)} style={{ width: '100%', marginBottom: 18 }} />
+        <input type="range" min="40" max="240" step="1" value={bpm} onChange={e => setBpm(+e.target.value)} style={{ width: '100%', marginBottom: 18 }} aria-label={`BPM: ${bpm}`} />
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          <button onClick={tapTempo} style={{ flex: 1, background: 'var(--surface-hover)', border: '1px solid var(--border-light)', color: 'var(--text)', padding: 11, borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={tapTempo} aria-label="Tap tempo: toque repetidamente para definir o BPM" style={{ flex: 1, background: 'var(--surface-hover)', border: '1px solid var(--border-light)', color: 'var(--text)', padding: 11, borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             Tap tempo
           </button>
           <button onClick={toggleAccent} style={{

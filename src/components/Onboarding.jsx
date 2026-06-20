@@ -37,12 +37,12 @@ export default function Onboarding({ onDismiss, onImport }) {
 
   return (
     <div className={s.backdrop}>
-      <div className={s.card}>
+      <div className={s.card} role="dialog" aria-modal="true" aria-label="Boas-vindas ao Leitor de Partituras">
         <button className={s.skip} onClick={onDismiss}>Pular</button>
-        <div className={s.iconWrap}>{STEPS[step].icon}</div>
-        <div className={s.title}>{STEPS[step].title}</div>
+        <div className={s.iconWrap} aria-hidden="true">{STEPS[step].icon}</div>
+        <div className={s.title} aria-live="polite">{STEPS[step].title}</div>
         <div className={s.text}>{STEPS[step].text}</div>
-        <div className={s.dots}>
+        <div className={s.dots} aria-hidden="true">
           {STEPS.map((_, i) => (
             <div key={i} className={`${s.dot} ${i === step ? s.dotActive : ''}`} />
           ))}

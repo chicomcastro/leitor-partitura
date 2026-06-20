@@ -44,6 +44,7 @@ export default function GesturesPanel({ gestures, onChange, onClose }) {
             <select
               value={gestures[g.key] || 'none'}
               onChange={e => onChange({ ...gestures, [g.key]: e.target.value })}
+              aria-label={`Ação para ${g.label}`}
               style={{ flex: 1, background: 'var(--surface-hover)', border: '1px solid var(--border-light)', color: 'var(--text-bright)', padding: '9px 10px', borderRadius: 9, fontSize: 13, fontWeight: 600 }}
             >
               {ACTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}

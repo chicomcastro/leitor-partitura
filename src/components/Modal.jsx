@@ -1,14 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import s from './Modal.module.css'
 
 export default function Modal({ title, onClose, onConfirm, placeholder, list, onSelect, emptyText, markerMode, totalPages }) {
   const [text, setText] = useState('')
   const [page, setPage] = useState(markerMode?.currentPage || 1)
+  const panelRef = useRef(null)
+
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+    const focusable = panel.querySelector('input, button, select, textarea, [tabindex]:not([tabindex="-1"])')
+    if (focusable) focusable.focus()
+  }, [])
 
   return (
     <div className={s.backdrop} onClick={onClose}>
-      <div className={s.panel} onClick={e => e.stopPropagation()}>
-        <div className={s.title}>{title}</div>
+      <div className={s.panel} ref={panelRef} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div className={s.title} id="modal-title">{title}</div>
 
         {onConfirm && !markerMode && (
           <>
