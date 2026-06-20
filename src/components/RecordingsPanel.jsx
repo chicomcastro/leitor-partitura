@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n'
 import s from '../screens/Reader.module.css'
 
 const CLOSE_ICON = 'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z'
@@ -10,11 +11,13 @@ function fmtDur(sec) {
 }
 
 export default function RecordingsPanel({ recordings, playingId, onPlay, onDownload, onDelete, onClose }) {
+  const { t, locale } = useI18n()
+
   return (
     <div className={s.panelBackdrop} onClick={onClose}>
       <div className={s.panelWide} onClick={e => e.stopPropagation()}>
         <div className={s.panelHeader}>
-          <div className={s.panelTitle}>Gravações</div>
+          <div className={s.panelTitle}>{t('recordings.title')}</div>
           <button className={s.panelClose} onClick={onClose}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d={CLOSE_ICON} /></svg>
           </button>
@@ -40,7 +43,7 @@ export default function RecordingsPanel({ recordings, playingId, onPlay, onDownl
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rec.name}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
-                  {new Date(rec.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {fmtDur(rec.dur)}
+                  {new Date(rec.createdAt).toLocaleString(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {fmtDur(rec.dur)}
                 </div>
               </div>
               <button onClick={() => onDownload(rec)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', padding: 6 }}>
@@ -53,7 +56,7 @@ export default function RecordingsPanel({ recordings, playingId, onPlay, onDownl
           ))
         ) : (
           <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13.5, lineHeight: 1.5 }}>
-            Nenhuma gravação desta peça ainda.<br />Toque no microfone para gravar o ensaio.
+            {t('recordings.empty')}<br />{t('recordings.emptyHint')}
           </div>
         )}
       </div>

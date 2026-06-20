@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useI18n } from '../lib/i18n'
 import s from './Modal.module.css'
 
 export default function Modal({ title, onClose, onConfirm, placeholder, list, onSelect, emptyText, markerMode, totalPages }) {
+  const { t } = useI18n()
   const [text, setText] = useState('')
   const [page, setPage] = useState(markerMode?.currentPage || 1)
   const panelRef = useRef(null)
@@ -29,8 +31,8 @@ export default function Modal({ title, onClose, onConfirm, placeholder, list, on
               onKeyDown={e => e.key === 'Enter' && onConfirm(text)}
             />
             <div className={s.footer}>
-              <button className={s.btnCancel} onClick={onClose}>Cancelar</button>
-              <button className={s.btnSave} onClick={() => onConfirm(text)}>Salvar</button>
+              <button className={s.btnCancel} onClick={onClose}>{t('modal.cancel')}</button>
+              <button className={s.btnSave} onClick={() => onConfirm(text)}>{t('modal.save')}</button>
             </div>
           </>
         )}
@@ -41,11 +43,11 @@ export default function Modal({ title, onClose, onConfirm, placeholder, list, on
               className={s.input}
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder="Nome do salto (ex.: Coda, Letra C)"
+              placeholder={t('reader.markerName')}
               autoFocus
             />
             <div className={s.row}>
-              <span className={s.label}>Pula para a página</span>
+              <span className={s.label}>{t('reader.jumpToPage')}</span>
               <input
                 type="number"
                 min="1"
@@ -56,11 +58,11 @@ export default function Modal({ title, onClose, onConfirm, placeholder, list, on
               />
             </div>
             <div className={s.footer}>
-              <button className={s.btnCancel} onClick={onClose}>Cancelar</button>
+              <button className={s.btnCancel} onClick={onClose}>{t('modal.cancel')}</button>
               <button className={s.btnSave} onClick={() => {
                 const p = Math.max(1, Math.min(totalPages || 999, +page || 1))
-                onConfirm(text.trim() || ('Pág. ' + p), p)
-              }}>Salvar</button>
+                onConfirm(text.trim() || (t('reader.markerDefaultName') + ' ' + p), p)
+              }}>{t('modal.save')}</button>
             </div>
           </>
         )}
