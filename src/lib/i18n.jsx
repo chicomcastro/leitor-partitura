@@ -27,6 +27,7 @@ const translations = {
     'library.scores': 'Partituras',
     'library.backupExportError': 'Erro ao exportar backup.',
     'library.backupImportError': 'Erro ao importar backup.',
+    'library.viewMode': 'Modo de visualização',
     // Reader
     'reader.back': 'Voltar para a estante',
     'reader.page': 'Página',
@@ -168,6 +169,7 @@ const translations = {
     'library.scores': 'Scores',
     'library.backupExportError': 'Failed to export backup.',
     'library.backupImportError': 'Failed to import backup.',
+    'library.viewMode': 'View mode',
     'reader.back': 'Back to music stand',
     'reader.page': 'Page',
     'reader.pageOf': 'of',

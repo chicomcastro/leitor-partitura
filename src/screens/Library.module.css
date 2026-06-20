@@ -161,10 +161,92 @@
   display: flex;
 }
 
+.viewToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex: none;
+}
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
+}
+
+.gridsm {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.gridmd {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.gridlg {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+
+.listItem:hover {
+  border-color: var(--border-light);
+}
+
+.listThumb {
+  width: 48px;
+  height: 64px;
+  flex: none;
+}
+
+.listThumb .thumbWrap {
+  aspect-ratio: 3 / 4;
+  width: 100%;
+  height: 100%;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+
+.listInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.listName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
 }
 
 .card {

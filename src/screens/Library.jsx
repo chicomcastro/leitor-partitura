@@ -7,7 +7,9 @@ import Modal from '../components/Modal'
 import Onboarding from '../components/Onboarding'
 import s from './Library.module.css'
 
-function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t }) {
+const VIEW_MODES = ['grid-sm', 'grid-md', 'grid-lg', 'list']
+
+function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t, viewMode }) {
   const canvasRef = useRef(null)
   const drawnRef = useRef(null)
   const [imgUrl, setImgUrl] = useState(null)
@@ -43,31 +45,53 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove, t
     return () => { if (url) URL.revokeObjectURL(url) }
   }, [score.id, score.type])
 
+  const isList = viewMode === 'list'
+  const thumb = (
+    <div className={s.thumbWrap}>
+      {score.type === 'image'
+        ? <img src={imgUrl} className={s.thumbCanvas} alt={score.name} />
+        : <canvas ref={canvasRef} className={s.thumbCanvas} />
+      }
+    </div>
+  )
+
+  const actions = (
+    <>
+      <button className={s.iconBtnPlaylist} onClick={(e) => { e.stopPropagation(); onAddOpen(score.id) }} title={t('library.addToPlaylist')} aria-label={t('library.addToPlaylist')}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
+      </button>
+      {inPlaylist && (
+        <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); onRemove(score.id) }} title={t('library.removeFromPlaylist')} aria-label={t('library.removeFromPlaylist')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,13H5V11H19V13Z" /></svg>
+        </button>
+      )}
+      <button className={s.iconBtnDelete} onClick={(e) => { e.stopPropagation(); onDelete(score.id) }} title={t('library.delete')} aria-label={`${t('library.delete')} ${score.name}`}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
+      </button>
+    </>
+  )
+
+  if (isList) {
+    return (
+      <div className={s.listItem} onClick={() => onOpen(score.id)}>
+        <div className={s.listThumb}>{thumb}</div>
+        <div className={s.listInfo}>
+          <div className={s.listName}>{score.name}</div>
+          <div className={s.cardPages}>{score.pages} {score.pages === 1 ? t('library.page') : t('library.pages')}</div>
+        </div>
+        <div className={s.listActions} onClick={e => e.stopPropagation()}>{actions}</div>
+      </div>
+    )
+  }
+
   return (
     <div className={s.card}>
       <div className={s.cardThumb} onClick={() => onOpen(score.id)}>
-        <div className={s.thumbWrap}>
-          {score.type === 'image'
-            ? <img src={imgUrl} className={s.thumbCanvas} alt={score.name} />
-            : <canvas ref={canvasRef} className={s.thumbCanvas} />
-          }
-        </div>
+        {thumb}
         <div className={s.cardName}>{score.name}</div>
         <div className={s.cardPages}>{score.pages} {score.pages === 1 ? t('library.page') : t('library.pages')}</div>
       </div>
-      <div className={s.cardActions}>
-        <button className={s.iconBtnPlaylist} onClick={(e) => { e.stopPropagation(); onAddOpen(score.id) }} title={t('library.addToPlaylist')} aria-label={t('library.addToPlaylist')}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
-        </button>
-        {inPlaylist && (
-          <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); onRemove(score.id) }} title={t('library.removeFromPlaylist')} aria-label={t('library.removeFromPlaylist')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,13H5V11H19V13Z" /></svg>
-          </button>
-        )}
-        <button className={s.iconBtnDelete} onClick={(e) => { e.stopPropagation(); onDelete(score.id) }} title={t('library.delete')} aria-label={`${t('library.delete')} ${score.name}`}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
-        </button>
-      </div>
+      <div className={s.cardActions}>{actions}</div>
     </div>
   )
 }
@@ -82,6 +106,7 @@ export default function Library({
   const [modal, setModal] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [onboardingSeen, setOnboardingSeen] = useState(() => localStorage.getItem('sp.onboarding') === '1')
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('sp.viewMode') || 'grid-md')
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const dragRef = useRef(null)
@@ -92,6 +117,15 @@ export default function Library({
     document.addEventListener('pointerdown', close)
     return () => document.removeEventListener('pointerdown', close)
   }, [menuOpen])
+
+  const cycleView = useCallback(() => {
+    setViewMode(prev => {
+      const i = VIEW_MODES.indexOf(prev)
+      const next = VIEW_MODES[(i + 1) % VIEW_MODES.length]
+      localStorage.setItem('sp.viewMode', next)
+      return next
+    })
+  }, [])
 
   const showOnboarding = scores.length === 0 && !onboardingSeen
   const dismissOnboarding = useCallback(() => {
@@ -234,10 +268,17 @@ export default function Library({
               </svg>
             </button>
           )}
+          <button className={s.viewToggle} onClick={cycleView} aria-label={t('library.viewMode')}>
+            {viewMode === 'list' ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3,4H7V8H3V4M9,5V7H21V5H9M3,10H7V14H3V10M9,11V13H21V11H9M3,16H7V20H3V16M9,17V19H21V17H9Z" /></svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3" /></svg>
+            )}
+          </button>
         </div>
 
         {visibleScores.length > 0 ? (
-          <div className={s.grid} role="list" aria-label={t('library.scores')}>
+          <div className={`${viewMode === 'list' ? s.list : s.grid} ${s[viewMode.replace('-', '')]}`} role="list" aria-label={t('library.scores')}>
             {visibleScores.map((score, idx) => (
               <div
                 key={score.id}
@@ -262,6 +303,7 @@ export default function Library({
                   onAddOpen={(id) => setModal({ type: 'add', scoreId: id })}
                   onRemove={(id) => onRemoveFromPlaylist(activePlaylist, id)}
                   t={t}
+                  viewMode={viewMode}
                 />
               </div>
             ))}
