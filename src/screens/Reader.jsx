@@ -214,13 +214,19 @@ export default function Reader({
   const nextPage = useCallback(() => {
     if (pageMode === 'half') {
       const v = viewerRef.current
-      if (v) v.scrollBy({ top: v.clientHeight * 0.5, behavior: 'smooth' })
+      if (!v) return
+      const obj = wrappersRef.current[currentPage - 1]
+      const h = obj ? obj.wrap.offsetHeight : v.clientHeight
+      v.scrollBy({ top: h * 0.5, behavior: 'smooth' })
     } else gotoPage(currentPage + 1)
   }, [gotoPage, currentPage, pageMode])
   const prevPage = useCallback(() => {
     if (pageMode === 'half') {
       const v = viewerRef.current
-      if (v) v.scrollBy({ top: -v.clientHeight * 0.5, behavior: 'smooth' })
+      if (!v) return
+      const obj = wrappersRef.current[currentPage - 1]
+      const h = obj ? obj.wrap.offsetHeight : v.clientHeight
+      v.scrollBy({ top: -h * 0.5, behavior: 'smooth' })
     } else gotoPage(currentPage - 1)
   }, [gotoPage, currentPage, pageMode])
   const goBackJump = useCallback(() => {
