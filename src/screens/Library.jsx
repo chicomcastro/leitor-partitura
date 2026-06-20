@@ -209,32 +209,42 @@ export default function Library({
     }
   }, [playlists, setActivePlaylist, onOpenScore])
 
+  const downloadBlob = useCallback((blob, filename) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [])
+
   const sharePlaylist = useCallback(async (plId) => {
     const pl = playlists.find(p => p.id === plId)
     if (!pl) return
     try {
       const blob = await exportPlaylist(pl, scores)
-      const file = new File([blob], `${pl.name}.estante`, { type: 'application/octet-stream' })
+      const filename = `${pl.name}.estante`
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: pl.name })
-      } else {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = file.name
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      }
+      let canShare = false
+      try {
+        const file = new File([blob], filename, { type: 'application/octet-stream' })
+        canShare = navigator.canShare && navigator.canShare({ files: [file] })
+        if (canShare) {
+          await navigator.share({ files: [file], title: pl.name })
+          return
+        }
+      } catch (_) {}
+
+      downloadBlob(blob, filename)
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('share failed', err)
         alert(t('library.shareError'))
       }
     }
-  }, [playlists, scores, t])
+  }, [playlists, scores, t, downloadBlob])
 
   const tabs = [
     { id: null, name: t('library.allScores'), count: scores.length },
