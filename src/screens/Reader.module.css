@@ -1,0 +1,346 @@
+.root {
+  position: absolute;
+  inset: 0;
+  background: var(--ground-deep);
+}
+
+.viewer {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 16px 8px;
+}
+
+/* zone hints */
+.hintLeft, .hintRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+.hintLeft {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: 10px;
+  background: linear-gradient(to right, rgba(231,59,76,.10), transparent);
+}
+.hintRight {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: 10px;
+  background: linear-gradient(to left, rgba(231,59,76,.10), transparent);
+}
+
+/* chrome top */
+.topBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px 22px;
+  background: linear-gradient(to bottom, rgba(10,14,22,.96), rgba(10,14,22,0));
+  pointer-events: none;
+  z-index: 10;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(30,38,54,.85);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-bright);
+  cursor: pointer;
+  flex: none;
+}
+
+.titleWrap {
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pageLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pieceNav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.chromeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: rgba(30,38,54,.85);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.fitBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(30,38,54,.85);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0 12px;
+  height: 38px;
+  font-size: 12px;
+  font-weight: 600;
+  flex: none;
+}
+
+/* markers row */
+.markersRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  pointer-events: auto;
+}
+
+.backJumpBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 9px;
+  padding: 7px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
+  flex: none;
+  border: 1px solid var(--border-light);
+  cursor: pointer;
+}
+
+.backJumpActive {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.backJumpDisabled {
+  background: var(--surface);
+  color: #4A5468;
+}
+
+.markersScroll {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow-x: auto;
+  flex: 1;
+  padding-bottom: 2px;
+}
+
+.marker {
+  display: flex;
+  align-items: center;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-light);
+  border-radius: 9px;
+  color: var(--text);
+  flex: none;
+}
+
+.markerGoBtn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 4px 7px 11px;
+  white-space: nowrap;
+}
+
+.markerDelBtn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: .55;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 2px;
+}
+
+.addMarkerBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  border-radius: 9px;
+  color: #FF8995;
+  cursor: pointer;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  flex: none;
+}
+
+/* chrome bottom */
+.bottomBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 16px 16px;
+  background: linear-gradient(to top, rgba(10,14,22,.96), rgba(10,14,22,0));
+  pointer-events: none;
+  z-index: 10;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(22,28,42,.92);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 14px;
+  pointer-events: auto;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.toolBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  flex: none;
+}
+
+.toolBtnActive {
+  composes: toolBtn;
+  background: var(--accent);
+  color: var(--text-white);
+}
+
+.toolBtnInactive {
+  composes: toolBtn;
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.toolBtnGhost {
+  composes: toolBtn;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.toolBtnRec {
+  composes: toolBtn;
+  background: var(--recording);
+  color: var(--text-white);
+  animation: recpulse 1.2s infinite;
+}
+
+.speedGroup {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 90px;
+}
+
+.speedLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 56px;
+  text-align: right;
+}
+
+.divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-light);
+  flex: none;
+}
+
+/* panels */
+.panelBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 30;
+}
+
+.panel {
+  width: 360px;
+  max-width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 22px;
+}
+
+.panelWide {
+  composes: panel;
+  width: 420px;
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.panelTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-white);
+}
+
+.panelClose {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+}
