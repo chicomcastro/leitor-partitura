@@ -3,10 +3,12 @@ import { usePersistedState } from './hooks/usePersistedState'
 import { idbPut, idbDel } from './lib/db'
 import { idbGet } from './lib/db'
 import { loadPdfFromBuffer, evictDoc } from './lib/pdf'
+import Landing from './screens/Landing'
 import Library from './screens/Library'
 import Reader from './screens/Reader'
 
 export default function App() {
+  const [landingSeen, setLandingSeen] = useState(() => localStorage.getItem('sp.landing') === '1')
   const [view, setView] = useState('library')
   const [currentScoreId, setCurrentScoreId] = useState(null)
   const [activePlaylist, setActivePlaylist] = useState(null)
@@ -119,6 +121,16 @@ export default function App() {
         pieceList={pieceList}
         onOpenScore={openScore}
       />
+    )
+  }
+
+  if (scores.length === 0 && !landingSeen) {
+    return (
+      <Landing onEnter={() => {
+        localStorage.setItem('sp.landing', '1')
+        localStorage.setItem('sp.onboarding', '1')
+        setLandingSeen(true)
+      }} />
     )
   }
 
