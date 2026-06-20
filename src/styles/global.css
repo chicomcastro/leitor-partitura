@@ -16,6 +16,11 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
+@media (pointer: coarse) {
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-thumb { background: rgba(44,52,71,.5); }
+}
+
 input[type=range] {
   -webkit-appearance: none;
   appearance: none;

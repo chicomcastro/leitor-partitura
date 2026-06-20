@@ -42,6 +42,7 @@ export default function Reader({
   const [annotColor, setAnnotColor] = useState('#E73B4C')
   const [erasing, setErasingState] = useState(false)
   const [annWrappers, setAnnWrappers] = useState([])
+  const [turnFlash, setTurnFlash] = useState(0)
 
   const metro = useMetronome({ bpm, beats, accent })
   const annotations = useAnnotations()
@@ -256,8 +257,8 @@ export default function Reader({
   // gesture actions
   const doAction = useCallback((action) => {
     switch (action) {
-      case 'next': nextPage(); break
-      case 'prev': prevPage(); break
+      case 'next': nextPage(); setTurnFlash(f => f + 1); break
+      case 'prev': prevPage(); setTurnFlash(f => f + 1); break
       case 'autoscroll': toggleAutoscroll(); break
       case 'metro': metro.toggle(); break
       case 'record': recorder.toggleRec(); break
@@ -400,6 +401,7 @@ export default function Reader({
   return (
     <div className={s.root}>
       <div ref={viewerRef} className={s.viewer} role="document" aria-label={scoreName} />
+      {turnFlash > 0 && <div key={turnFlash} className={s.turnFlash} />}
 
       {chromeVisible && (
         <>
