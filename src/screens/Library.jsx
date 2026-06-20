@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback, useState } from 'react'
 import { idbGet } from '../lib/db'
 import { getPdfDoc } from '../lib/pdf'
 import Modal from '../components/Modal'
+import Onboarding from '../components/Onboarding'
 import s from './Library.module.css'
 
 function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove }) {
@@ -77,7 +78,14 @@ export default function Library({
   const fileRef = useRef(null)
   const [modal, setModal] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [onboardingSeen, setOnboardingSeen] = useState(() => localStorage.getItem('sp.onboarding') === '1')
   const dragRef = useRef(null)
+
+  const showOnboarding = scores.length === 0 && !onboardingSeen
+  const dismissOnboarding = useCallback(() => {
+    localStorage.setItem('sp.onboarding', '1')
+    setOnboardingSeen(true)
+  }, [])
 
   const inPlaylist = activePlaylist != null
   const activePl = playlists.find(p => p.id === activePlaylist)
@@ -229,6 +237,13 @@ export default function Library({
           }))}
           onSelect={(plId) => { onAddToPlaylist(plId, modal.scoreId) }}
           emptyText="Você ainda não tem playlists. Crie uma na tela inicial primeiro."
+        />
+      )}
+
+      {showOnboarding && (
+        <Onboarding
+          onDismiss={dismissOnboarding}
+          onImport={() => { dismissOnboarding(); fileRef.current?.click() }}
         />
       )}
     </div>
