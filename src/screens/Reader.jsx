@@ -111,8 +111,7 @@ export default function Reader({
         const cw = v.clientWidth - 24
         const ch = v.clientHeight - 32
         const n = doc.numPages
-        const isLandscape = cw > ch * 1.3
-        const isDual = isLandscape && fitMode === 'page'
+        const isDual = fitMode === 'dual'
         let currentRow = null
 
         for (let i = 1; i <= n; i++) {
@@ -440,9 +439,9 @@ export default function Reader({
                 </button>
               </div>
             )}
-            <button className={s.fitBtn} onClick={() => setFitMode(fitMode === 'page' ? 'width' : 'page')} aria-label={`${t('reader.fitModeLabel')}: ${fitMode === 'page' ? t('reader.fitPage') : t('reader.fitWidth')}`}>
+            <button className={s.fitBtn} onClick={() => setFitMode(fitMode === 'page' ? 'dual' : fitMode === 'dual' ? 'width' : 'page')} aria-label={`${t('reader.fitModeLabel')}: ${fitMode === 'page' ? t('reader.fitPage') : fitMode === 'dual' ? t('reader.fitDual') : t('reader.fitWidth')}`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z" /></svg>
-              {fitMode === 'page' ? t('reader.fitPage') : t('reader.fitWidth')}
+              {fitMode === 'page' ? t('reader.fitPage') : fitMode === 'dual' ? t('reader.fitDual') : t('reader.fitWidth')}
             </button>
             <button className={s.fitBtn} onClick={() => setPageMode(m => m === 'full' ? 'half' : 'full')} aria-label={`${t('reader.scrollModeLabel')}: ${pageMode === 'full' ? t('reader.fullPage') : t('reader.halfPage')}`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z" /></svg>
