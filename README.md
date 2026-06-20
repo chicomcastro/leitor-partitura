@@ -1,70 +1,96 @@
-# Estante — Leitor de Partituras
+# 🎵 Estante
 
-A free, open-source web app for reading sheet music on tablets during rehearsals and performances. No accounts, no subscriptions — your scores stay on your device.
+### Sua estante de partituras digital — gratuita, offline e direto no tablet.
 
-**[Open the app](https://chicomcastro.github.io/leitor-partitura/)**
+Uma alternativa web e gratuita a apps como forScore e MobileSheets. Sem cadastro, sem assinatura. Suas partituras ficam salvas no seu dispositivo.
 
-## Features
+### 👉 [Abrir o app](https://chicomcastro.github.io/leitor-partitura/)
 
-- **PDF & Image import** — Load PDFs or scanned images (JPG, PNG) of your sheet music
-- **Touch gestures** — Configure tap zones and swipes for hands-free page turning
-- **Dual-page landscape** — Two pages side by side when you rotate your tablet
-- **Metronome** — Built-in metronome with tap tempo and time signature
-- **Annotations** — Draw directly on your scores with multiple colors and eraser
-- **Bookmarks & markers** — Jump to specific sections instantly
-- **Playlists** — Organize pieces for setlists and rehearsals with drag-and-drop reorder
-- **Auto-scroll** — Configurable speed for continuous scrolling
-- **Audio recording** — Record rehearsals directly in the app
-- **Backup/restore** — Export and import all your data as a single `.estante` file
-- **Keyboard & pedal support** — Arrow keys, PageUp/PageDown for Bluetooth pedals
-- **Works offline** — PWA with service worker, install on your home screen
-- **Bilingual** — Portuguese (BR) and English
+---
 
-## Quick Start
+## Por que usar?
+
+Músicos em ensaio e palco precisam de algo simples: abrir a partitura e tocar. Sem distrações, sem fricção. O Estante foi feito pra isso.
+
+- Funciona no **tablet, celular ou computador** — basta abrir no navegador
+- **Instala como app** na tela inicial — funciona offline
+- **Zero cadastro** — importou, tá pronto
+
+## O que faz
+
+📄 **Importar partituras** — PDF ou imagens (JPG, PNG) das suas partituras escaneadas
+
+👆 **Virar páginas por toque** — Configure zonas de toque e swipes do jeito que preferir. Ideal pra tablet na estante
+
+📖 **Duas páginas lado a lado** — Modo paisagem mostra duas páginas automaticamente, como um livro aberto
+
+🎯 **Marcadores** — Salve pontos importantes e pule direto pra eles
+
+📝 **Anotações** — Desenhe sobre a partitura com cores diferentes e borracha
+
+🎵 **Metrônomo integrado** — Com tap tempo, compasso e acento
+
+🎤 **Gravação de áudio** — Grave o ensaio direto no app
+
+📋 **Playlists** — Monte setlists e reorganize por arrastar
+
+⬇️ **Rolagem automática** — Velocidade ajustável pra leitura contínua
+
+🎹 **Pedal Bluetooth** — PageUp/PageDown e setas do teclado funcionam como virada de página
+
+💾 **Backup completo** — Exporte e importe tudo num arquivo `.estante`
+
+🌐 **Português e inglês**
+
+## Como usar
+
+1. Abra o app no navegador do seu tablet
+2. Importe um PDF ou imagem da sua partitura
+3. Toque na partitura pra abrir o leitor
+4. Configure gestos e metrônomo conforme sua preferência
+
+Pronto. Bom ensaio! 🎶
+
+---
+
+<details>
+<summary>Para desenvolvedores</summary>
+
+### Setup local
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173/leitor-partitura/` in your browser.
+Acesse `http://localhost:5173/leitor-partitura/`
 
-## Tech Stack
-
-- **React 19** + **Vite**
-- **pdf.js** for PDF rendering
-- **IndexedDB** for file storage, **localStorage** for settings
-- **CSS Modules** + design tokens
-- **PWA** with Workbox via vite-plugin-pwa
-- Deployed via **GitHub Actions** to **GitHub Pages**
-
-## Building
+### Scripts
 
 ```bash
-npm run build    # Production build in dist/
-npm run preview  # Preview the production build locally
+npm run build      # Build de produção
+npm run preview    # Preview do build
+npm run test:e2e   # Testes E2E (Playwright)
 ```
 
-## Testing
+### Tech stack
 
-```bash
-npm run test:e2e   # Playwright E2E tests (requires Chromium)
-```
+React 19, Vite, pdf.js, CSS Modules, PWA com Workbox. Deploy automático via GitHub Actions para GitHub Pages. CI com Playwright e Lighthouse.
 
-Lighthouse CI runs automatically on every push and PR via GitHub Actions.
-
-## Architecture
+### Arquitetura
 
 ```
 src/
-  screens/        Library (score grid) and Reader (PDF viewer)
-  components/     Modal, MetronomePanel, GesturesPanel, RecordingsPanel, Onboarding
-  hooks/          usePersistedState, useMetronome, useRecorder, useAnnotations
-  lib/            db (IndexedDB), pdf (pdf.js wrapper), storage, backup, i18n
-  styles/         Design tokens and global styles
-docs/adr/         Architecture Decision Records
+  screens/      Library (grid de partituras) e Reader (visualizador)
+  components/   Modal, MetronomePanel, GesturesPanel, Onboarding...
+  hooks/        usePersistedState, useMetronome, useRecorder, useAnnotations
+  lib/          db (IndexedDB), pdf, backup, i18n
+  styles/       Design tokens e estilos globais
+docs/adr/       Registros de decisões arquiteturais
 ```
 
-## License
+</details>
+
+## Licença
 
 MIT
