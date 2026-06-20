@@ -4,31 +4,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Leitor de Partituras — a sheet music reader/player web app. The entire application lives in a single self-contained HTML file (`Leitor de Partituras.html`) that uses a bundler bootstrap pattern to unpack embedded assets at runtime.
+**Estante** — a free, offline-first web sheet music reader for musicians on tablets. Alternative to forScore/MobileSheets. Deployed via GitHub Pages at `chicomcastro.github.io/leitor-partitura/`.
+
+## Commands
+
+```bash
+npm run dev        # Vite dev server at localhost:5173/leitor-partitura/
+npm run build      # Production build → dist/
+npm run preview    # Preview production build
+```
+
+If `npx vite` doesn't work, use `./node_modules/.bin/vite` directly.
 
 ## Architecture
 
-The app is a **single bundled HTML file** (~930KB) with no external build system, no `package.json`, and no separate source files. The HTML file contains:
+**Vite + React 19** app with CSS Modules and no state management library.
 
-1. **Bundler bootstrap** (lines 1–170): A loader script that unpacks base64-encoded, gzip-compressed assets from embedded JSON manifests and reconstructs the full page at runtime.
-2. **`__bundler/manifest`** (line 174): JSON mapping UUIDs to assets — JS libraries, fonts (Montserrat via woff/woff2).
-3. **`__bundler/ext_resources`** (line 178): External resource references.
-4. **`__bundler/template`** (line 182): The actual app HTML/CSS/JS as a JSON-encoded string, using React (via Babel `text/babel` transform) with JSX.
+### Data Flow
+- All app state lives in `App.jsx` using `usePersistedState` (useState + localStorage sync)
+- Binary data (PDFs, images, recordings) stored in IndexedDB (`partituras-db` v1, stores: `pdfs`, `recordings`)
+- Settings stored in localStorage under `sp.*` keys
+- Scores have a `type` field: `'pdf'` (default) or `'image'`
 
-**Key technical details:**
-- React with in-browser Babel JSX transformation (`text/babel` scripts)
-- IndexedDB + localStorage for persistence
-- AudioContext (Web Audio API) for playback
-- Canvas for rendering
-- PDF support for import/display
-- `getUserMedia` for camera access (likely for scanning sheet music)
+### Key Files
+- `src/App.jsx` — Root component, all top-level state and callbacks
+- `src/screens/Library.jsx` — Score grid, playlists, search, drag-and-drop reorder
+- `src/screens/Reader.jsx` — PDF/image viewer with imperative DOM (builds viewer via useEffect, not JSX)
+- `src/lib/db.js` — IndexedDB wrapper (idbPut, idbGet, idbDel, idbGetAll)
+- `src/lib/pdf.js` — pdf.js wrapper with document cache
+- `src/lib/backup.js` — Export/import .estante backup files
+- `src/lib/i18n.jsx` — React Context i18n provider (PT-BR + EN)
 
-## Development
+### Reader internals
+The Reader builds its DOM imperatively in a useEffect. Pages are `<div>` wrappers with canvases rendered lazily via IntersectionObserver. Annotations use transparent canvas overlays. Dual-page mode activates when `containerWidth > containerHeight * 1.3` and fitMode is 'page'.
 
-There is no build step. To work on this app:
+### PWA
+Configured via `vite-plugin-pwa` with Workbox. Manifest in `vite.config.js`. Icons in `public/`.
 
-- Open the HTML file directly in a browser (`open "Leitor de Partituras.html"`)
-- All changes happen within the single HTML file — the template string inside `__bundler/template` contains the actual application code
-- The bundler bootstrap decompresses and injects assets on `DOMContentLoaded`
-
-**Warning:** The template is stored as a JSON-encoded string inside a `<script>` tag. Edits to application logic require modifying this encoded content carefully, or extracting/re-encoding the template.
+## Conventions
+- PT-BR is the default locale; all new strings need entries in both `pt-BR` and `en` objects in `src/lib/i18n.jsx`
+- Base URL is `/leitor-partitura/` (set in vite.config.js)
+- ADRs in `docs/adr/` for significant decisions
+- No external CSS framework — design tokens in `src/styles/tokens.css`
