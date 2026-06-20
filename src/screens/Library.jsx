@@ -7,8 +7,10 @@ import s from './Library.module.css'
 function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove }) {
   const canvasRef = useRef(null)
   const drawnRef = useRef(null)
+  const [imgUrl, setImgUrl] = useState(null)
 
   useEffect(() => {
+    if ((score.type || 'pdf') !== 'pdf') return
     const canvas = canvasRef.current
     if (!canvas || drawnRef.current === score.id) return
     drawnRef.current = score.id
@@ -24,13 +26,28 @@ function ScoreCard({ score, inPlaylist, onOpen, onDelete, onAddOpen, onRemove })
         await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise
       })
       .catch(() => { drawnRef.current = null })
-  }, [score.id])
+  }, [score.id, score.type])
+
+  useEffect(() => {
+    if (score.type !== 'image') return
+    let url = null
+    idbGet('pdfs', score.id).then(buf => {
+      if (buf) {
+        url = URL.createObjectURL(new Blob([buf]))
+        setImgUrl(url)
+      }
+    })
+    return () => { if (url) URL.revokeObjectURL(url) }
+  }, [score.id, score.type])
 
   return (
     <div className={s.card}>
       <div className={s.cardThumb} onClick={() => onOpen(score.id)}>
         <div className={s.thumbWrap}>
-          <canvas ref={canvasRef} className={s.thumbCanvas} />
+          {score.type === 'image'
+            ? <img src={imgUrl} className={s.thumbCanvas} alt={score.name} style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+            : <canvas ref={canvasRef} className={s.thumbCanvas} />
+          }
         </div>
         <div className={s.cardName}>{score.name}</div>
         <div className={s.cardPages}>{score.pages} {score.pages === 1 ? 'página' : 'páginas'}</div>
@@ -102,9 +119,9 @@ export default function Library({
           </button>
           <button className={s.btnPrimary} onClick={() => fileRef.current?.click()}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2M11,15V12H9V15H6V17H9V20H11V17H14V15H11Z" /></svg>
-            Importar PDF
+            Importar
           </button>
-          <input type="file" accept="application/pdf" multiple ref={fileRef} onChange={handleFiles} style={{ display: 'none' }} />
+          <input type="file" accept="application/pdf,image/*" multiple ref={fileRef} onChange={handleFiles} style={{ display: 'none' }} />
         </div>
       </div>
 
@@ -180,12 +197,12 @@ export default function Library({
             <div className={s.emptyText}>
               {inPlaylist
                 ? 'Adicione partituras a esta playlist pela aba "Todas as partituras".'
-                : 'Importe os PDFs das suas partituras. Eles ficam salvos neste dispositivo, prontos para o ensaio.'}
+                : 'Importe PDFs ou imagens das suas partituras. Eles ficam salvos neste dispositivo, prontos para o ensaio.'}
             </div>
             {!inPlaylist && (
               <button className={s.emptyBtn} onClick={() => fileRef.current?.click()}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2M11,15V12H9V15H6V17H9V20H11V17H14V15H11Z" /></svg>
-                Importar PDF
+                Importar
               </button>
             )}
           </div>

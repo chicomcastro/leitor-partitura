@@ -39,8 +39,13 @@ export default function App() {
         const buf = await f.arrayBuffer()
         const id = 'sc' + Date.now() + Math.floor(Math.random() * 1000)
         await idbPut('pdfs', id, buf)
-        const doc = await loadPdfFromBuffer(id, buf)
-        updated = [{ id, name: f.name.replace(/\.pdf$/i, ''), pages: doc.numPages, addedAt: Date.now() }, ...updated]
+        if (f.type.startsWith('image/')) {
+          const cleanName = f.name.replace(/\.(jpe?g|png|webp|gif|bmp|svg)$/i, '')
+          updated = [{ id, name: cleanName, pages: 1, type: 'image', addedAt: Date.now() }, ...updated]
+        } else {
+          const doc = await loadPdfFromBuffer(id, buf)
+          updated = [{ id, name: f.name.replace(/\.pdf$/i, ''), pages: doc.numPages, type: 'pdf', addedAt: Date.now() }, ...updated]
+        }
       } catch (err) { console.error('import', err) }
     }
     setScores(updated)
@@ -94,6 +99,7 @@ export default function App() {
     return (
       <Reader
         scoreId={currentScoreId}
+        scoreType={currentScore?.type || 'pdf'}
         scoreName={currentScore?.name || ''}
         onBack={backToLibrary}
         fitMode={fitMode}

@@ -12,7 +12,7 @@ import Modal from '../components/Modal'
 import s from './Reader.module.css'
 
 export default function Reader({
-  scoreId, scoreName, onBack, fitMode, setFitMode,
+  scoreId, scoreType, scoreName, onBack, fitMode, setFitMode,
   scrollSpeed, setScrollSpeed, bpm, setBpm, beats, setBeats,
   gestures, setGestures, markers, setMarkers,
   recordingsMeta, setRecordingsMeta, pieceList, onOpenScore,
@@ -59,13 +59,47 @@ export default function Reader({
   useEffect(() => {
     const v = viewerRef.current
     if (!v) return
-    const key = scoreId + '|' + fitMode
+    const resolvedType = scoreType || 'pdf'
+    const key = scoreId + '|' + fitMode + '|' + resolvedType
     if (builtKeyRef.current === key) return
     builtKeyRef.current = key
 
     let cancelled = false
     ;(async () => {
       try {
+        if (resolvedType === 'image') {
+          // Image score: single full-width image
+          const buf = await getBuffer(scoreId)
+          if (cancelled || !buf) return
+          v.innerHTML = ''
+          wrappersRef.current = []
+          if (ioRef.current) ioRef.current.disconnect()
+
+          const url = URL.createObjectURL(new Blob([buf]))
+          const wrap = document.createElement('div')
+          wrap.dataset.page = 1
+          wrap.style.cssText = 'width:100%;max-width:100%;margin:0 auto 16px auto;background:var(--paper);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.5);position:relative;overflow:hidden;display:flex;justify-content:center;'
+          const img = document.createElement('img')
+          img.src = url
+          img.style.cssText = 'max-width:100%;height:auto;display:block;'
+          img.onload = () => {
+            // Adjust wrap height after image loads
+            wrap.style.height = 'auto'
+          }
+          wrap.appendChild(img)
+          v.appendChild(wrap)
+
+          wrappersRef.current.push({ i: 1, wrap, page: null, scale: 1 })
+          setTotalPages(1)
+          setCurrentPage(1)
+          setAnnWrappers([...wrappersRef.current])
+          annotations.loadAnnotations(scoreId)
+
+          // Cleanup object URL on unmount handled by cancelled flag
+          return
+        }
+
+        // PDF score
         const doc = await getPdfDoc(scoreId, getBuffer)
         if (cancelled) return
         v.innerHTML = ''
@@ -79,19 +113,42 @@ export default function Reader({
         const cw = v.clientWidth - 24
         const ch = v.clientHeight - 32
         const n = doc.numPages
+        const isLandscape = cw > ch * 1.3
+        const isDual = isLandscape && fitMode === 'page'
+        let currentRow = null
 
         for (let i = 1; i <= n; i++) {
           const page = await doc.getPage(i)
           const vp = page.getViewport({ scale: 1 })
-          const scale = fitMode === 'width' ? cw / vp.width : Math.min(cw / vp.width, ch / vp.height)
+          let scale
+          if (isDual) {
+            scale = Math.min((cw / 2 - 12) / vp.width, ch / vp.height)
+          } else {
+            scale = fitMode === 'width' ? cw / vp.width : Math.min(cw / vp.width, ch / vp.height)
+          }
           const w = Math.round(vp.width * scale)
           const h = Math.round(vp.height * scale)
           const wrap = document.createElement('div')
           wrap.dataset.page = i
-          wrap.style.cssText = `width:${w}px;height:${h}px;margin:0 auto 16px auto;background:var(--paper);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.5);position:relative;overflow:hidden;`
-          v.appendChild(wrap)
+          wrap.style.cssText = `width:${w}px;height:${h}px;background:var(--paper);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.5);position:relative;overflow:hidden;`
+
+          if (isDual) {
+            // Page 1 stands alone, then pairs: 2-3, 4-5, 6-7, etc.
+            const needsNewRow = i === 1 || (i > 1 && i % 2 === 0)
+            if (needsNewRow) {
+              currentRow = document.createElement('div')
+              currentRow.style.cssText = 'display:flex;justify-content:center;gap:16px;margin:0 auto 16px auto;'
+              v.appendChild(currentRow)
+            }
+            currentRow.appendChild(wrap)
+            ioRef.current.observe(wrap)
+          } else {
+            wrap.style.margin = '0 auto 16px auto'
+            v.appendChild(wrap)
+            ioRef.current.observe(wrap)
+          }
+
           wrappersRef.current.push({ i, wrap, page, scale })
-          ioRef.current.observe(wrap)
         }
 
         setTotalPages(n)
@@ -107,7 +164,7 @@ export default function Reader({
     })()
 
     return () => { cancelled = true }
-  }, [scoreId, fitMode, getBuffer])
+  }, [scoreId, scoreType, fitMode, getBuffer])
 
   function renderPage(i) {
     const obj = wrappersRef.current[i - 1]
