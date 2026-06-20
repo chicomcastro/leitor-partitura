@@ -296,6 +296,46 @@
   flex: none;
 }
 
+/* annotation bar */
+.annotBar {
+  position: absolute;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(22,28,42,.92);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 14px;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.colorSwatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  transition: border-color .15s;
+}
+
+.colorSwatchActive {
+  border-color: var(--text-white);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.25);
+}
+
+.eraserSwatch {
+  background: var(--surface-hover) !important;
+  color: var(--text);
+}
+
 /* panels */
 .panelBackdrop {
   position: absolute;

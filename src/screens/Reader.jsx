@@ -3,6 +3,8 @@ import { idbGet } from '../lib/db'
 import { getPdfDoc } from '../lib/pdf'
 import { useMetronome } from '../hooks/useMetronome'
 import { useRecorder } from '../hooks/useRecorder'
+import { useAnnotations } from '../hooks/useAnnotations'
+import { useAnnotationLayer } from '../components/AnnotationLayer'
 import MetronomePanel from '../components/MetronomePanel'
 import GesturesPanel from '../components/GesturesPanel'
 import RecordingsPanel from '../components/RecordingsPanel'
@@ -34,8 +36,20 @@ export default function Reader({
   const [modal, setModal] = useState(null)
   const [accent, setAccent] = useState(true)
   const [pageMode, setPageMode] = useState('full')
+  const [annotating, setAnnotating] = useState(false)
+  const [annotColor, setAnnotColor] = useState('#E73B4C')
+  const [erasing, setErasingState] = useState(false)
+  const [annWrappers, setAnnWrappers] = useState([])
 
   const metro = useMetronome({ bpm, beats, accent })
+  const annotations = useAnnotations()
+  const { setErasing } = useAnnotationLayer({
+    wrappers: annWrappers,
+    scoreId,
+    annotating,
+    color: annotColor,
+    annotations,
+  })
   const scoreRecs = recordingsMeta.filter(r => r.scoreId === scoreId)
   const recorder = useRecorder({ scoreId, scoreName, recordingsMeta, setRecordingsMeta })
 
@@ -82,6 +96,8 @@ export default function Reader({
 
         setTotalPages(n)
         setCurrentPage(1)
+        setAnnWrappers([...wrappersRef.current])
+        annotations.loadAnnotations(scoreId)
         renderPage(1)
         renderPage(2)
       } catch (e) {
@@ -200,9 +216,13 @@ export default function Reader({
   useEffect(() => {
     const v = viewerRef.current
     if (!v) return
-    const onDown = (e) => { pointerRef.current = { x: e.clientX, y: e.clientY, t: Date.now() } }
+    const onDown = (e) => {
+      if (annotating && e.target.dataset.annPage) return
+      pointerRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+    }
     const onUp = (e) => {
       if (!pointerRef.current) return
+      if (annotating && e.target.dataset.annPage) return
       const dx = e.clientX - pointerRef.current.x
       const dy = e.clientY - pointerRef.current.y
       const dt = Date.now() - pointerRef.current.t
@@ -223,7 +243,7 @@ export default function Reader({
     v.addEventListener('pointerdown', onDown)
     v.addEventListener('pointerup', onUp)
     return () => { v.removeEventListener('pointerdown', onDown); v.removeEventListener('pointerup', onUp) }
-  }, [gestures, doAction])
+  }, [gestures, doAction, annotating])
 
   // keyboard
   useEffect(() => {
@@ -342,6 +362,26 @@ export default function Reader({
         </div>
       )}
 
+      {chromeVisible && annotating && (
+        <div className={s.annotBar}>
+          {['#E73B4C', '#3B82F6', '#1a1a1a'].map(c => (
+            <button
+              key={c}
+              className={`${s.colorSwatch} ${annotColor === c && !erasing ? s.colorSwatchActive : ''}`}
+              style={{ background: c }}
+              onClick={() => { setAnnotColor(c); setErasingState(false); setErasing(false) }}
+            />
+          ))}
+          <button
+            className={`${s.colorSwatch} ${s.eraserSwatch} ${erasing ? s.colorSwatchActive : ''}`}
+            onClick={() => { setErasingState(true); setErasing(true) }}
+            title="Borracha"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.24,3.56L21.19,8.5C21.97,9.29 21.97,10.55 21.19,11.34L12,20.53C10.44,22.09 7.91,22.09 6.34,20.53L2.81,17C2.03,16.21 2.03,14.95 2.81,14.16L13.41,3.56C14.2,2.78 15.46,2.78 16.24,3.56M4.22,15.58L7.76,19.11C8.54,19.9 9.8,19.9 10.59,19.11L14.12,15.58L9.17,10.63L4.22,15.58Z" /></svg>
+          </button>
+        </div>
+      )}
+
       {chromeVisible && (
         <div className={s.bottomBar}>
           <div className={s.toolbar}>
@@ -366,6 +406,9 @@ export default function Reader({
             </button>
             <button className={s.toolBtnGhost} onClick={() => setShowRecordings(true)} title="Gravações">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9,3V15.5A3.5,3.5 0 0,1 5.5,19A3.5,3.5 0 0,1 2,15.5A3.5,3.5 0 0,1 5.5,12C6.04,12 6.55,12.12 7,12.34V6.47L9,6.06M15,3V15.5A3.5,3.5 0 0,1 11.5,19A3.5,3.5 0 0,1 8,15.5A3.5,3.5 0 0,1 11.5,12C12.04,12 12.55,12.12 13,12.34V3H15M21,3V15.5A3.5,3.5 0 0,1 17.5,19A3.5,3.5 0 0,1 14,15.5A3.5,3.5 0 0,1 17.5,12C18.04,12 18.55,12.12 19,12.34V3H21Z" /></svg>
+            </button>
+            <button className={annotating ? s.toolBtnActive : s.toolBtnGhost} onClick={() => setAnnotating(a => !a)} title="Anotar">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" /></svg>
             </button>
             <button className={s.toolBtnGhost} onClick={() => setShowGestures(true)} title="Configurar gestos">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" /></svg>
