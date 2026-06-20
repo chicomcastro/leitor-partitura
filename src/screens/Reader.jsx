@@ -16,7 +16,7 @@ export default function Reader({
   scoreId, scoreType, scoreName, onBack, fitMode, setFitMode,
   scrollSpeed, setScrollSpeed, bpm, setBpm, beats, setBeats,
   gestures, setGestures, markers, setMarkers,
-  recordingsMeta, setRecordingsMeta, pieceList, onOpenScore,
+  recordingsMeta, setRecordingsMeta, playlistScores,
 }) {
   const { t } = useI18n()
   const viewerRef = useRef(null)
@@ -27,9 +27,11 @@ export default function Reader({
   const rafRef = useRef(null)
   const lastTsRef = useRef(null)
   const pointerRef = useRef(null)
+  const scoreRangesRef = useRef([])
 
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [currentPieceName, setCurrentPieceName] = useState(scoreName)
   const [chromeVisible, setChromeVisible] = useState(true)
   const [autoscroll, setAutoscroll] = useState(false)
   const [showMetro, setShowMetro] = useState(false)
@@ -52,56 +54,35 @@ export default function Reader({
     annotating,
     color: annotColor,
     annotations,
+    scoreRanges: scoreRangesRef.current,
   })
-  const scoreRecs = recordingsMeta.filter(r => r.scoreId === scoreId)
+  const scoreRecs = recordingsMeta.filter(r => {
+    if (playlistScores) return playlistScores.some(ps => ps.id === r.scoreId)
+    return r.scoreId === scoreId
+  })
   const recorder = useRecorder({ scoreId, scoreName, recordingsMeta, setRecordingsMeta })
 
   const getBuffer = useCallback((id) => idbGet('pdfs', id), [])
+
+  const isPlaylist = playlistScores && playlistScores.length > 0
 
   // build viewer
   useEffect(() => {
     const v = viewerRef.current
     if (!v) return
-    const resolvedType = scoreType || 'pdf'
-    const key = scoreId + '|' + fitMode + '|' + resolvedType
-    if (builtKeyRef.current === key) return
-    builtKeyRef.current = key
+
+    const buildKey = isPlaylist
+      ? 'pl|' + playlistScores.map(ps => ps.id).join(',') + '|' + fitMode
+      : scoreId + '|' + fitMode + '|' + (scoreType || 'pdf')
+    if (builtKeyRef.current === buildKey) return
+    builtKeyRef.current = buildKey
 
     let cancelled = false
     ;(async () => {
       try {
-        if (resolvedType === 'image') {
-          const buf = await getBuffer(scoreId)
-          if (cancelled || !buf) return
-          v.innerHTML = ''
-          wrappersRef.current = []
-          if (ioRef.current) ioRef.current.disconnect()
-
-          const url = URL.createObjectURL(new Blob([buf]))
-          const wrap = document.createElement('div')
-          wrap.dataset.page = 1
-          wrap.style.cssText = 'width:100%;max-width:100%;margin:0 auto 16px auto;background:var(--paper);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.5);position:relative;overflow:hidden;display:flex;justify-content:center;'
-          const img = document.createElement('img')
-          img.src = url
-          img.style.cssText = 'max-width:100%;height:auto;display:block;'
-          img.onload = () => {
-            wrap.style.height = 'auto'
-          }
-          wrap.appendChild(img)
-          v.appendChild(wrap)
-
-          wrappersRef.current.push({ i: 1, wrap, page: null, scale: 1 })
-          setTotalPages(1)
-          setCurrentPage(1)
-          setAnnWrappers([...wrappersRef.current])
-          annotations.loadAnnotations(scoreId)
-          return
-        }
-
-        const doc = await getPdfDoc(scoreId, getBuffer)
-        if (cancelled) return
         v.innerHTML = ''
         wrappersRef.current = []
+        scoreRangesRef.current = []
         if (ioRef.current) ioRef.current.disconnect()
 
         ioRef.current = new IntersectionObserver((entries) => {
@@ -110,49 +91,122 @@ export default function Reader({
 
         const cw = v.clientWidth - 24
         const ch = v.clientHeight - 32
-        const n = doc.numPages
         const isDual = fitMode === 'dual'
-        let currentRow = null
 
-        for (let i = 1; i <= n; i++) {
-          const page = await doc.getPage(i)
-          const vp = page.getViewport({ scale: 1 })
-          let scale
-          if (isDual) {
-            scale = Math.min((cw / 2 - 12) / vp.width, ch / vp.height)
-          } else {
-            scale = fitMode === 'width' ? cw / vp.width : Math.min(cw / vp.width, ch / vp.height)
+        const scoresToRender = isPlaylist ? playlistScores : [{ id: scoreId, type: scoreType || 'pdf', name: scoreName }]
+        let globalPage = 0
+        let initialScrollTarget = null
+
+        for (let si = 0; si < scoresToRender.length; si++) {
+          const ps = scoresToRender[si]
+          if (cancelled) return
+          const resolvedType = ps.type || 'pdf'
+          const offset = globalPage
+
+          if (isPlaylist) {
+            const divider = document.createElement('div')
+            divider.className = 'piece-divider'
+            divider.style.cssText = 'display:flex;align-items:center;gap:12px;padding:16px 12px;color:var(--text-secondary);font-size:13px;font-weight:600;'
+            const line1 = document.createElement('div')
+            line1.style.cssText = 'flex:1;height:1px;background:var(--border-light);'
+            const label = document.createElement('span')
+            label.textContent = ps.name
+            const line2 = document.createElement('div')
+            line2.style.cssText = 'flex:1;height:1px;background:var(--border-light);'
+            divider.appendChild(line1)
+            divider.appendChild(label)
+            divider.appendChild(line2)
+            v.appendChild(divider)
           }
-          const w = Math.round(vp.width * scale)
-          const h = Math.round(vp.height * scale)
-          const wrap = document.createElement('div')
-          wrap.dataset.page = i
-          wrap.style.cssText = `width:${w}px;height:${h}px;background:var(--paper);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.5);position:relative;overflow:hidden;`
 
-          if (isDual) {
-            const needsNewRow = i === 1 || (i > 1 && i % 2 === 0)
-            if (needsNewRow) {
-              currentRow = document.createElement('div')
-              currentRow.style.cssText = 'display:flex;justify-content:center;gap:16px;margin:0 auto 16px auto;'
-              v.appendChild(currentRow)
-            }
-            currentRow.appendChild(wrap)
-            ioRef.current.observe(wrap)
-          } else {
-            wrap.style.margin = '0 auto 16px auto'
+          if (resolvedType === 'image') {
+            globalPage++
+            const buf = await getBuffer(ps.id)
+            if (cancelled || !buf) continue
+            const url = URL.createObjectURL(new Blob([buf]))
+            const wrap = document.createElement('div')
+            wrap.dataset.page = globalPage
+            wrap.style.cssText = 'width:100%;max-width:100%;margin:0 auto 16px auto;background:var(--paper);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.5);position:relative;overflow:hidden;display:flex;justify-content:center;'
+            const img = document.createElement('img')
+            img.src = url
+            img.style.cssText = 'max-width:100%;height:auto;display:block;'
+            wrap.appendChild(img)
             v.appendChild(wrap)
-            ioRef.current.observe(wrap)
-          }
+            wrappersRef.current.push({ i: globalPage, wrap, page: null, scale: 1 })
+            scoreRangesRef.current.push({ scoreId: ps.id, offset, count: 1, name: ps.name })
+            if (ps.id === scoreId) initialScrollTarget = globalPage
+          } else {
+            const doc = await getPdfDoc(ps.id, getBuffer)
+            if (cancelled) return
+            const n = doc.numPages
+            let currentRow = null
 
-          wrappersRef.current.push({ i, wrap, page, scale })
+            for (let p = 1; p <= n; p++) {
+              globalPage++
+              const page = await doc.getPage(p)
+              const vp = page.getViewport({ scale: 1 })
+              let scale
+              if (isDual) {
+                scale = Math.min((cw / 2 - 12) / vp.width, ch / vp.height)
+              } else {
+                scale = fitMode === 'width' ? cw / vp.width : Math.min(cw / vp.width, ch / vp.height)
+              }
+              const w = Math.round(vp.width * scale)
+              const h = Math.round(vp.height * scale)
+              const wrap = document.createElement('div')
+              wrap.dataset.page = globalPage
+              wrap.style.cssText = `width:${w}px;height:${h}px;background:var(--paper);border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.5);position:relative;overflow:hidden;`
+
+              if (isDual) {
+                const needsNewRow = p === 1 || (p > 1 && p % 2 === 0)
+                if (needsNewRow) {
+                  currentRow = document.createElement('div')
+                  currentRow.style.cssText = 'display:flex;justify-content:center;gap:16px;margin:0 auto 16px auto;'
+                  v.appendChild(currentRow)
+                }
+                currentRow.appendChild(wrap)
+                ioRef.current.observe(wrap)
+              } else {
+                wrap.style.margin = '0 auto 16px auto'
+                v.appendChild(wrap)
+                ioRef.current.observe(wrap)
+              }
+
+              wrappersRef.current.push({ i: globalPage, wrap, page, scale })
+            }
+            scoreRangesRef.current.push({ scoreId: ps.id, offset, count: n, name: ps.name })
+            if (ps.id === scoreId) initialScrollTarget = offset + 1
+          }
         }
 
-        setTotalPages(n)
+        setTotalPages(globalPage)
         setCurrentPage(1)
+        setCurrentPieceName(scoresToRender[0]?.name || scoreName)
         setAnnWrappers([...wrappersRef.current])
-        annotations.loadAnnotations(scoreId)
+
+        // Load annotations
+        if (isPlaylist) {
+          annotations.clearMap()
+          for (const range of scoreRangesRef.current) {
+            await annotations.loadAnnotationsWithOffset(range.scoreId, range.offset)
+          }
+        } else {
+          annotations.loadAnnotations(scoreId)
+        }
+
+        // Render first pages
         renderPage(1)
         renderPage(2)
+
+        // Scroll to the initially opened score
+        if (isPlaylist && initialScrollTarget && initialScrollTarget > 1) {
+          const target = wrappersRef.current[initialScrollTarget - 1]
+          if (target) {
+            requestAnimationFrame(() => {
+              v.scrollTo({ top: target.wrap.offsetTop - 16, behavior: 'instant' })
+            })
+          }
+        }
       } catch (e) {
         console.error('buildViewer', e)
         builtKeyRef.current = null
@@ -160,11 +214,11 @@ export default function Reader({
     })()
 
     return () => { cancelled = true }
-  }, [scoreId, scoreType, fitMode, getBuffer])
+  }, [scoreId, scoreType, fitMode, getBuffer, isPlaylist, playlistScores])
 
   function renderPage(i) {
     const obj = wrappersRef.current[i - 1]
-    if (!obj || obj.wrap.dataset.rendered) return
+    if (!obj || obj.wrap.dataset.rendered || !obj.page) return
     obj.wrap.dataset.rendered = '1'
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const vp = obj.page.getViewport({ scale: obj.scale * dpr })
@@ -194,6 +248,17 @@ export default function Reader({
           else break
         }
         setCurrentPage(cur)
+
+        // Update current piece name
+        const ranges = scoreRangesRef.current
+        if (ranges.length > 0) {
+          for (let r = ranges.length - 1; r >= 0; r--) {
+            if (cur > ranges[r].offset) {
+              setCurrentPieceName(ranges[r].name)
+              break
+            }
+          }
+        }
       })
     }
     v.addEventListener('scroll', onScroll, { passive: true })
@@ -318,7 +383,6 @@ export default function Reader({
       }
     }
 
-    // mouse fallback for desktop
     const onDown = (e) => {
       if (annotating && e.target.dataset.annPage) return
       if (e.pointerType === 'touch') return
@@ -391,11 +455,6 @@ export default function Reader({
     }
   }, [])
 
-  // piece nav
-  const hasPieceNav = pieceList && pieceList.indexOf(scoreId) >= 0 && pieceList.length > 1
-  const prevPiece = () => { if (!pieceList) return; const i = pieceList.indexOf(scoreId); if (i > 0) onOpenScore(pieceList[i - 1]) }
-  const nextPiece = () => { if (!pieceList) return; const i = pieceList.indexOf(scoreId); if (i >= 0 && i < pieceList.length - 1) onOpenScore(pieceList[i + 1]) }
-
   const handleBack = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     setAutoscroll(false)
@@ -403,9 +462,11 @@ export default function Reader({
     onBack()
   }
 
+  const displayName = isPlaylist ? currentPieceName : scoreName
+
   return (
     <div className={s.root}>
-      <div ref={viewerRef} className={s.viewer} role="document" aria-label={scoreName} />
+      <div ref={viewerRef} className={s.viewer} role="document" aria-label={displayName} />
       {turnFlash > 0 && <div key={turnFlash} className={s.turnFlash} />}
 
       {chromeVisible && (
@@ -426,19 +487,9 @@ export default function Reader({
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" /></svg>
             </button>
             <div className={s.titleWrap}>
-              <div className={s.title}>{scoreName}</div>
+              <div className={s.title}>{displayName}</div>
               <div className={s.pageLabel} aria-live="polite">{t('reader.page')} {currentPage} {t('reader.pageOf')} {totalPages}</div>
             </div>
-            {hasPieceNav && (
-              <div className={s.pieceNav}>
-                <button className={s.chromeBtn} onClick={prevPiece} title={t('reader.prevPiece')} aria-label={t('reader.prevPiece')}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6,18V6H8V18H6M9.5,12L18,6V18L9.5,12Z" /></svg>
-                </button>
-                <button className={s.chromeBtn} onClick={nextPiece} title={t('reader.nextPiece')} aria-label={t('reader.nextPiece')}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16,18H18V6H16M6,18L14.5,12L6,6V18Z" /></svg>
-                </button>
-              </div>
-            )}
             <button className={s.fitBtn} onClick={() => setFitMode(fitMode === 'page' ? 'dual' : fitMode === 'dual' ? 'width' : 'page')} aria-label={`${t('reader.fitModeLabel')}: ${fitMode === 'page' ? t('reader.fitPage') : fitMode === 'dual' ? t('reader.fitDual') : t('reader.fitWidth')}`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z" /></svg>
               {fitMode === 'page' ? t('reader.fitPage') : fitMode === 'dual' ? t('reader.fitDual') : t('reader.fitWidth')}

@@ -1,18 +1,13 @@
 import { useEffect, useRef, useCallback } from 'react'
 
-/**
- * Imperatively creates transparent canvases over each page wrapper div
- * for drawing annotations. Works with the DOM-based wrapper approach.
- */
-export function useAnnotationLayer({ wrappers, scoreId, annotating, color, annotations }) {
-  const canvasMapRef = useRef(new Map())   // pageNum -> canvas
+export function useAnnotationLayer({ wrappers, scoreId, annotating, color, annotations, scoreRanges }) {
+  const canvasMapRef = useRef(new Map())
   const drawingRef = useRef(false)
   const colorRef = useRef(color)
   const erasingRef = useRef(false)
 
   colorRef.current = color
 
-  // Ensure each wrapper has an annotation canvas
   useEffect(() => {
     if (!wrappers || !wrappers.length) return
 
@@ -37,7 +32,6 @@ export function useAnnotationLayer({ wrappers, scoreId, annotating, color, annot
       wrap.appendChild(canvas)
       existing.set(i, canvas)
 
-      // Restore saved annotation if any
       const saved = annotations.getPageAnnotation(i)
       if (saved) {
         const img = new Image()
@@ -50,7 +44,6 @@ export function useAnnotationLayer({ wrappers, scoreId, annotating, color, annot
     }
   }, [wrappers, annotations])
 
-  // Toggle pointer-events based on annotating state
   useEffect(() => {
     for (const canvas of canvasMapRef.current.values()) {
       canvas.style.pointerEvents = annotating ? 'auto' : 'none'
@@ -58,7 +51,6 @@ export function useAnnotationLayer({ wrappers, scoreId, annotating, color, annot
     }
   }, [annotating])
 
-  // Drawing handlers
   const getCanvasCoords = useCallback((e, canvas) => {
     const rect = canvas.getBoundingClientRect()
     return {
@@ -71,10 +63,15 @@ export function useAnnotationLayer({ wrappers, scoreId, annotating, color, annot
     const pageNum = +canvas.dataset.annPage
     const dataUrl = canvas.toDataURL('image/png')
     annotations.setPageAnnotation(pageNum, dataUrl)
-    annotations.saveAnnotations(scoreId)
-  }, [annotations, scoreId])
 
-  // Attach/detach drawing event listeners
+    if (scoreRanges && scoreRanges.length > 0) {
+      const range = scoreRanges.find(r => pageNum > r.offset && pageNum <= r.offset + r.count)
+      if (range) annotations.saveAnnotationsForRange(range.scoreId, range.offset, range.count)
+    } else {
+      annotations.saveAnnotations(scoreId)
+    }
+  }, [annotations, scoreId, scoreRanges])
+
   useEffect(() => {
     if (!annotating) return
 
@@ -83,7 +80,6 @@ export function useAnnotationLayer({ wrappers, scoreId, annotating, color, annot
       canvas.setPointerCapture(e.pointerId)
       drawingRef.current = true
 
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
       const ctx = canvas.getContext('2d')
       const { x, y } = getCanvasCoords(e, canvas)
 
@@ -141,7 +137,6 @@ export function useAnnotationLayer({ wrappers, scoreId, annotating, color, annot
     erasingRef.current = val
   }, [])
 
-  // Cleanup canvases on unmount or score change
   useEffect(() => {
     return () => {
       for (const canvas of canvasMapRef.current.values()) {

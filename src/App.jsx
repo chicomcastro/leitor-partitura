@@ -93,11 +93,11 @@ export default function App() {
   const currentScore = scores.find(s => s.id === currentScoreId)
 
   if (view === 'reader' && currentScoreId) {
-    const pieceList = (() => {
-      const pl = playlists.find(p => p.id === activePlaylist)
-      if (pl) return pl.items.filter(id => scores.some(s => s.id === id))
-      return null
-    })()
+    const pl = playlists.find(p => p.id === activePlaylist)
+    const playlistScores = pl
+      ? pl.items.map(id => scores.find(s => s.id === id)).filter(Boolean)
+      : null
+    const markersKey = pl ? `pl_${pl.id}` : currentScoreId
 
     return (
       <Reader
@@ -115,12 +115,11 @@ export default function App() {
         setBeats={setBeats}
         gestures={gestures}
         setGestures={setGestures}
-        markers={markersMap[currentScoreId] || []}
-        setMarkers={(markers) => setMarkersMap(prev => ({ ...prev, [currentScoreId]: markers }))}
+        markers={markersMap[markersKey] || []}
+        setMarkers={(markers) => setMarkersMap(prev => ({ ...prev, [markersKey]: markers }))}
         recordingsMeta={recordingsMeta}
         setRecordingsMeta={setRecordingsMeta}
-        pieceList={pieceList}
-        onOpenScore={openScore}
+        playlistScores={playlistScores}
       />
     )
   }
