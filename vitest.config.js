@@ -21,6 +21,14 @@ export default defineConfig({
         '**/*.test.{js,jsx}',
         '**/*.module.css',
       ],
+      // Guard against regressions. Set below current levels with margin so the
+      // build fails if coverage drops meaningfully; raise as coverage grows.
+      thresholds: {
+        lines: 28,
+        statements: 28,
+        functions: 35,
+        branches: 60,
+      },
     },
   },
 })

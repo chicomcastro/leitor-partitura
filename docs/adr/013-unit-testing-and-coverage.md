@@ -28,3 +28,8 @@ could land unnoticed. We wanted a low-friction way to grow coverage and to
   tests are added; the sticky comment shows the trend.
 - The sticky comment requires `pull-requests: write`; it degrades gracefully
   (shows `—` for the delta) when no base artifact exists yet.
+- Coverage **thresholds** (`vitest.config.js`) fail the build if coverage drops
+  meaningfully below current levels (lines/statements 28%, functions 35%,
+  branches 60%). They are set with margin and should be raised as coverage grows.
+- Component tests use **@testing-library/react** (jsdom); the vitest config sets
+  `esbuild.jsx: 'automatic'` so JSX in source/test files transforms correctly.

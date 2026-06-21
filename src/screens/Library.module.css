@@ -279,6 +279,7 @@
 }
 
 .thumbWrap {
+  position: relative;
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--paper);
@@ -287,6 +288,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* shimmer placeholder shown until the page/image finishes rendering */
+.thumbSkeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(100deg, var(--surface) 30%, var(--surface-hover) 50%, var(--surface) 70%);
+  background-size: 200% 100%;
+  animation: thumbShimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes thumbShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
 }
 
 .thumbCanvas {
