@@ -69,7 +69,7 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,13H5V11H19V13Z" /></svg>
         </button>
       )}
-      <button className={s.iconBtnDelete} onClick={(e) => { e.stopPropagation(); onDelete(score.id) }} title={t('library.delete')} aria-label={`${t('library.delete')} ${score.name}`}>
+      <button className={s.iconBtnDelete} onClick={(e) => { e.stopPropagation(); if (confirm(`${t('library.delete')} "${score.name}"?`)) onDelete(score.id) }} title={t('library.delete')} aria-label={`${t('library.delete')} ${score.name}`}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
       </button>
     </>
