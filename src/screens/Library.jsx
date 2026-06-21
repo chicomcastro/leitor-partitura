@@ -561,6 +561,7 @@ function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onDone, onC
 
 function BulkAddModal({ scores, onAdd, onClose, t }) {
   const [selected, setSelected] = useState(new Set())
+  const [query, setQuery] = useState('')
 
   const toggle = (id) => {
     setSelected(prev => {
@@ -571,12 +572,22 @@ function BulkAddModal({ scores, onAdd, onClose, t }) {
     })
   }
 
+  const filtered = scores.filter(sc => sc.name.toLowerCase().includes(query.toLowerCase()))
+
   return (
     <div className={s.modalBackdrop} onClick={onClose}>
       <div className={s.modalPanel} onClick={e => e.stopPropagation()}>
         <div className={s.modalTitle}>{t('library.bulkAdd')}</div>
+        <input
+          className={s.createInlineInput}
+          type="text"
+          placeholder={t('library.search')}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          style={{ marginBottom: 10, width: '100%' }}
+        />
         <div className={s.bulkList}>
-          {scores.map(sc => (
+          {filtered.map(sc => (
             <label key={sc.id} className={s.checkboxLabel}>
               <input
                 type="checkbox"
