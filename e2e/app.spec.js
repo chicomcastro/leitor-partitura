@@ -60,6 +60,8 @@ test.describe('Library', () => {
 
   test('has language toggle', async ({ page }) => {
     await skipLanding(page)
+    // The language toggle lives inside the overflow menu, so open it first.
+    await page.getByRole('button', { name: 'Menu' }).click()
     const langBtn = page.getByRole('button', { name: /idioma|language/i })
     await expect(langBtn).toBeVisible()
   })
