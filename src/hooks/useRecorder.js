@@ -1,7 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { idbPut, idbGet, idbDel } from '../lib/db'
+import { useToast } from '../lib/ui'
+import { useI18n } from '../lib/i18n'
 
 export function useRecorder({ scoreId, scoreName, recordingsMeta, setRecordingsMeta }) {
+  const toast = useToast()
+  const { t } = useI18n()
   const [recording, setRecording] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [playingId, setPlayingId] = useState(null)
@@ -32,9 +36,9 @@ export function useRecorder({ scoreId, scoreName, recordingsMeta, setRecordingsM
       setElapsed(0)
       intervalRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
     } catch {
-      alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.')
+      toast(t('reader.micError'), { type: 'error' })
     }
-  }, [scoreId, scoreName, elapsed, setRecordingsMeta])
+  }, [scoreId, scoreName, elapsed, setRecordingsMeta, toast, t])
 
   const stopRec = useCallback(() => {
     clearInterval(intervalRef.current)

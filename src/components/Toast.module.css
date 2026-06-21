@@ -1,0 +1,109 @@
+.toastHost {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+  width: max-content;
+  max-width: min(90vw, 420px);
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--surface, #1b2130);
+  color: var(--text-bright, #fff);
+  border: 1px solid var(--border-light, #2a3346);
+  border-radius: var(--radius-md, 12px);
+  padding: 12px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  cursor: pointer;
+  text-align: left;
+  max-width: 100%;
+  animation: toastIn .18s ease-out;
+}
+
+.toast_success { border-left: 3px solid #10B981; }
+.toast_error { border-left: 3px solid var(--accent, #E73B4C); }
+.toast_info { border-left: 3px solid var(--text-muted, #64748B); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* confirmation dialog */
+.confirmBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1001;
+  animation: toastIn .15s ease-out;
+}
+
+.confirmPanel {
+  width: 360px;
+  max-width: 100%;
+  background: var(--surface, #1b2130);
+  border: 1px solid var(--border-light, #2a3346);
+  border-radius: var(--radius-xl, 18px);
+  padding: 22px;
+}
+
+.confirmTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-white, #fff);
+  margin-bottom: 8px;
+}
+
+.confirmMessage {
+  font-size: 14px;
+  color: var(--text-secondary, #aeb6c4);
+  line-height: 1.5;
+}
+
+.confirmFooter {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.confirmCancel {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border-light, #2a3346);
+  color: var(--text, #d7dce5);
+  padding: 11px;
+  border-radius: var(--radius-md, 12px);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.confirmOk {
+  flex: 1;
+  background: var(--accent, #E73B4C);
+  border: none;
+  color: #fff;
+  padding: 11px;
+  border-radius: var(--radius-md, 12px);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.confirmDanger { background: var(--accent, #E73B4C); }

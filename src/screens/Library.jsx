@@ -7,6 +7,7 @@ import {
   recentScores, favoriteScores, parseTags, PLAYLIST_COLORS, SORT_OPTIONS,
 } from '../lib/library'
 import { useI18n } from '../lib/i18n'
+import { useToast, useConfirm } from '../lib/ui'
 import Modal from '../components/Modal'
 import Onboarding from '../components/Onboarding'
 import s from './Library.module.css'
@@ -24,6 +25,7 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
   const canvasRef = useRef(null)
   const drawnRef = useRef(null)
   const [imgUrl, setImgUrl] = useState(null)
+  const confirm = useConfirm()
 
   useEffect(() => {
     if ((score.type || 'pdf') !== 'pdf') return
@@ -93,11 +95,11 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
       </button>
       {inPlaylist && onRemove && (
-        <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); if (confirm(`${t('library.removeFromPlaylist')}?`)) onRemove() }} title={t('library.removeFromPlaylist')} aria-label={t('library.removeFromPlaylist')}>
+        <button className={s.iconBtnRemove} onClick={async (e) => { e.stopPropagation(); if (await confirm({ message: `${t('library.removeFromPlaylist')}?`, confirmLabel: t('library.removeFromPlaylist'), danger: true })) onRemove() }} title={t('library.removeFromPlaylist')} aria-label={t('library.removeFromPlaylist')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,13H5V11H19V13Z" /></svg>
         </button>
       )}
-      <button className={s.iconBtnDelete} onClick={(e) => { e.stopPropagation(); if (confirm(`${t('library.delete')} "${score.name}"?`)) onDelete(score.id) }} title={t('library.delete')} aria-label={`${t('library.delete')} ${score.name}`}>
+      <button className={s.iconBtnDelete} onClick={async (e) => { e.stopPropagation(); if (await confirm({ title: t('library.delete'), message: `"${score.name}"`, confirmLabel: t('library.delete'), danger: true })) onDelete(score.id) }} title={t('library.delete')} aria-label={`${t('library.delete')} ${score.name}`}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
       </button>
     </>
@@ -139,6 +141,8 @@ export default function Library({
   onUpdatePlaylist, onReorderPlaylists, onAddToPlaylist, onRemoveFromPlaylist, onReorderPlaylist,
 }) {
   const { t, locale, changeLocale, LOCALES } = useI18n()
+  const toast = useToast()
+  const confirm = useConfirm()
   const fileRef = useRef(null)
   const [modal, setModal] = useState(null)
   const [query, setQuery] = useState('')
@@ -244,9 +248,9 @@ export default function Library({
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('backup export failed', err)
-      alert(t('library.backupExportError'))
+      toast(t('library.backupExportError'), { type: 'error' })
     }
-  }, [t])
+  }, [t, toast])
 
   const handleFiles = useCallback(async (e) => {
     const files = Array.from(e.target.files || [])
@@ -256,16 +260,16 @@ export default function Library({
     if (estanteFile) {
       try {
         const result = await importBackup(estanteFile)
-        if (result?.type === 'playlist') alert(t('library.playlistImported'))
+        if (result?.type === 'playlist') toast(t('library.playlistImported'), { type: 'success' })
         window.location.reload()
       } catch (err) {
         console.error('backup import failed', err)
-        alert(t('library.backupImportError'))
+        toast(t('library.backupImportError'), { type: 'error' })
       }
       return
     }
     onImport(files)
-  }, [onImport, t])
+  }, [onImport, t, toast])
 
   const toggleLocale = useCallback(() => {
     const currentIdx = LOCALES.findIndex(l => l.code === locale)
@@ -307,10 +311,10 @@ export default function Library({
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('share failed', err)
-        alert(t('library.shareError'))
+        toast(t('library.shareError'), { type: 'error' })
       }
     }
-  }, [playlists, scores, t, downloadBlob])
+  }, [playlists, scores, t, downloadBlob, toast])
 
   const toggleFavorite = useCallback((id) => {
     const sc = allScores.find(s => s.id === id)
@@ -467,7 +471,7 @@ export default function Library({
                   <button className={s.iconTool} onClick={() => sharePlaylist(activePl.id)} disabled={activePl.items.length === 0} title={t('library.share')} aria-label={t('library.share')}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.61 20.92,19C20.92,17.39 19.61,16.08 18,16.08Z" /></svg>
                   </button>
-                  <button className={s.iconTool} onClick={() => { if (confirm(t('library.deletePlaylist') + '?')) { onDeletePlaylist(activePl.id); selectSection('all') } }} title={t('library.deletePlaylist')} aria-label={t('library.deletePlaylist')}>
+                  <button className={s.iconTool} onClick={async () => { if (await confirm({ title: t('library.deletePlaylist'), message: activePl.name, confirmLabel: t('library.deletePlaylist'), danger: true })) { onDeletePlaylist(activePl.id); selectSection('all') } }} title={t('library.deletePlaylist')} aria-label={t('library.deletePlaylist')}>
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
                   </button>
                 </div>
@@ -622,6 +626,7 @@ export default function Library({
 function EditPlaylistModal({ playlist, onSave, onDelete, onClose, t }) {
   const [name, setName] = useState(playlist.name)
   const [color, setColor] = useState(playlist.color || PLAYLIST_COLORS[0])
+  const confirm = useConfirm()
   return (
     <div className={s.modalBackdrop} onClick={onClose}>
       <div className={s.modalPanel} onClick={e => e.stopPropagation()}>
@@ -651,7 +656,7 @@ function EditPlaylistModal({ playlist, onSave, onDelete, onClose, t }) {
           </div>
         </div>
         <div className={s.modalFooter}>
-          <button className={s.modalDeleteBtn} onClick={() => { if (confirm(t('library.deletePlaylist') + '?')) onDelete() }}>
+          <button className={s.modalDeleteBtn} onClick={async () => { if (await confirm({ title: t('library.deletePlaylist'), message: playlist.name, confirmLabel: t('library.deletePlaylist'), danger: true })) onDelete() }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
           </button>
           <button className={s.modalCancelBtn} onClick={onClose}>{t('modal.cancel')}</button>
