@@ -313,6 +313,10 @@ export default function Library({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8,5.14V19.14L19,12.14L8,5.14Z" /></svg>
             {t('library.play')}
           </button>
+          <button className={s.bulkAddBtn} onClick={() => setModal({ type: 'bulk' })}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
+            {t('library.bulkAdd')}
+          </button>
           <button className={s.shareBtn} onClick={() => sharePlaylist(activePl.id)} disabled={activePl.items.length === 0}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.61 20.92,19C20.92,17.39 19.61,16.08 18,16.08Z" /></svg>
             {t('library.share')}
@@ -425,6 +429,16 @@ export default function Library({
             onAddToPlaylist(plId, modal.scoreId, from || undefined, to || undefined)
             setModal(null)
           }}
+          onCreatePlaylist={onCreatePlaylist}
+          onClose={() => setModal(null)}
+          t={t}
+        />
+      )}
+
+      {modal?.type === 'bulk' && (
+        <BulkAddModal
+          scores={scores}
+          onAdd={(ids) => { ids.forEach(id => onAddToPlaylist(activePlaylist, id)) }}
           onClose={() => setModal(null)}
           t={t}
         />
@@ -440,76 +454,139 @@ export default function Library({
   )
 }
 
-function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onClose, t }) {
+function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onCreatePlaylist, onClose, t }) {
   const [selectedPl, setSelectedPl] = useState(null)
   const [fromPage, setFromPage] = useState('')
   const [toPage, setToPage] = useState('')
+  const [newName, setNewName] = useState('')
   const hasRange = totalPages > 1
+
+  const handleCreate = () => {
+    const name = newName.trim()
+    if (!name) return
+    onCreatePlaylist(name)
+    setNewName('')
+  }
 
   return (
     <div className={s.modalBackdrop} onClick={onClose}>
       <div className={s.modalPanel} onClick={e => e.stopPropagation()}>
         <div className={s.modalTitle}>{t('library.addToPlaylist')}</div>
 
-        {playlists.length > 0 ? (
-          <>
-            <div className={s.modalList}>
-              {playlists.map(p => (
-                <button
-                  key={p.id}
-                  className={`${s.modalListBtn} ${selectedPl === p.id ? s.modalListBtnActive : ''}`}
-                  onClick={() => setSelectedPl(p.id)}
-                >
-                  {p.name}
-                  {p.items.some(item => (item.scoreId || item) === scoreId) ? ' ✓' : ''}
-                </button>
-              ))}
-            </div>
+        <div className={s.modalList}>
+          {playlists.length === 0 && (
+            <div className={s.modalEmpty}>{t('library.noPlaylists')}</div>
+          )}
+          {playlists.map(p => (
+            <label key={p.id} className={s.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={selectedPl === p.id}
+                onChange={() => setSelectedPl(selectedPl === p.id ? null : p.id)}
+              />
+              {p.name}
+              {p.items.some(item => (item.scoreId || item) === scoreId) ? ' ✓' : ''}
+            </label>
+          ))}
+        </div>
 
-            {hasRange && selectedPl && (
-              <div className={s.pageRangeRow}>
-                <span className={s.pageRangeLabel}>{t('library.fromPage')}</span>
-                <input
-                  type="number"
-                  min="1"
-                  max={totalPages}
-                  placeholder="1"
-                  className={s.pageRangeInput}
-                  value={fromPage}
-                  onChange={e => setFromPage(e.target.value)}
-                />
-                <span className={s.pageRangeLabel}>{t('library.toPage')}</span>
-                <input
-                  type="number"
-                  min={fromPage || 1}
-                  max={totalPages}
-                  placeholder={String(totalPages)}
-                  className={s.pageRangeInput}
-                  value={toPage}
-                  onChange={e => setToPage(e.target.value)}
-                />
-              </div>
-            )}
+        <div className={s.createInlineRow}>
+          <input
+            className={s.createInlineInput}
+            type="text"
+            placeholder={t('library.playlistName')}
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
+          />
+          <button className={s.createInlineBtn} disabled={!newName.trim()} onClick={handleCreate}>
+            +
+          </button>
+        </div>
 
-            <div className={s.modalFooter}>
-              <button className={s.modalCancelBtn} onClick={onClose}>{t('modal.cancel')}</button>
-              <button
-                className={s.modalSaveBtn}
-                disabled={!selectedPl}
-                onClick={() => {
-                  if (!selectedPl) return
-                  const from = fromPage ? Math.max(1, Math.min(totalPages, +fromPage)) : null
-                  const to = toPage ? Math.max(from || 1, Math.min(totalPages, +toPage)) : null
-                  onAdd(selectedPl, from, to)
-                }}
-              >
-                {t('library.add')}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className={s.modalEmpty}>{t('library.noPlaylists')}</div>
+        {hasRange && selectedPl && (
+          <div className={s.pageRangeRow}>
+            <span className={s.pageRangeLabel}>{t('library.fromPage')}</span>
+            <input
+              type="number"
+              min="1"
+              max={totalPages}
+              placeholder="1"
+              className={s.pageRangeInput}
+              value={fromPage}
+              onChange={e => setFromPage(e.target.value)}
+            />
+            <span className={s.pageRangeLabel}>{t('library.toPage')}</span>
+            <input
+              type="number"
+              min={fromPage || 1}
+              max={totalPages}
+              placeholder={String(totalPages)}
+              className={s.pageRangeInput}
+              value={toPage}
+              onChange={e => setToPage(e.target.value)}
+            />
+          </div>
         )}
+
+        <div className={s.modalFooter}>
+          <button className={s.modalCancelBtn} onClick={onClose}>{t('modal.cancel')}</button>
+          <button
+            className={s.modalSaveBtn}
+            disabled={!selectedPl}
+            onClick={() => {
+              if (!selectedPl) return
+              const from = fromPage ? Math.max(1, Math.min(totalPages, +fromPage)) : null
+              const to = toPage ? Math.max(from || 1, Math.min(totalPages, +toPage)) : null
+              onAdd(selectedPl, from, to)
+            }}
+          >
+            {t('library.add')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BulkAddModal({ scores, onAdd, onClose, t }) {
+  const [selected, setSelected] = useState(new Set())
+
+  const toggle = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  return (
+    <div className={s.modalBackdrop} onClick={onClose}>
+      <div className={s.modalPanel} onClick={e => e.stopPropagation()}>
+        <div className={s.modalTitle}>{t('library.bulkAdd')}</div>
+        <div className={s.bulkList}>
+          {scores.map(sc => (
+            <label key={sc.id} className={s.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={selected.has(sc.id)}
+                onChange={() => toggle(sc.id)}
+              />
+              {sc.name}
+            </label>
+          ))}
+        </div>
+        <div className={s.modalFooter}>
+          <button className={s.modalCancelBtn} onClick={onClose}>{t('modal.cancel')}</button>
+          <button
+            className={s.modalSaveBtn}
+            disabled={selected.size === 0}
+            onClick={() => { onAdd([...selected]); onClose() }}
+          >
+            {t('library.add')} ({selected.size})
+          </button>
+        </div>
       </div>
     </div>
   )
