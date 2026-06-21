@@ -144,6 +144,9 @@ export default function App() {
         recordingsMeta={recordingsMeta}
         setRecordingsMeta={setRecordingsMeta}
         playlistScores={playlistScores}
+        playlists={playlists}
+        onAddToPlaylist={addToPlaylist}
+        onCreatePlaylist={createPlaylist}
       />
     )
   }

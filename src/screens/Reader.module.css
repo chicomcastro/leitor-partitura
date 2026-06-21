@@ -394,6 +394,62 @@
   display: flex;
 }
 
+/* metronome beat flash */
+.beatFlash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  border: 3px solid var(--accent);
+  opacity: 0;
+  animation: beatPulse .15s ease-out forwards;
+}
+
+.beatFlashNormal {
+  composes: beatFlash;
+  border-color: rgba(255,255,255,.35);
+}
+
+@keyframes beatPulse {
+  0% { opacity: .9; }
+  100% { opacity: 0; }
+}
+
+/* beat dots indicator (always visible when metronome running) */
+.beatDots {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 12;
+  pointer-events: none;
+  padding-top: env(safe-area-inset-top);
+}
+
+.beatDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-light);
+  transition: all .06s;
+}
+
+.beatDotActive {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  margin-top: -2px;
+}
+
+.beatDotAccent {
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  margin-top: -2px;
+}
+
 /* page turn flash feedback */
 .turnFlash {
   position: absolute;
