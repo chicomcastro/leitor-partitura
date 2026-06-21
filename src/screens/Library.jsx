@@ -438,6 +438,7 @@ export default function Library({
       {modal?.type === 'bulk' && (
         <BulkAddModal
           scores={scores}
+          existingIds={new Set((activePl?.items || []).map(item => item.scoreId || item))}
           onAdd={(ids) => { ids.forEach(id => onAddToPlaylist(activePlaylist, id)) }}
           onClose={() => setModal(null)}
           t={t}
@@ -559,7 +560,7 @@ function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onDone, onC
   )
 }
 
-function BulkAddModal({ scores, onAdd, onClose, t }) {
+function BulkAddModal({ scores, existingIds, onAdd, onClose, t }) {
   const [selected, setSelected] = useState(new Set())
   const [query, setQuery] = useState('')
 
@@ -572,7 +573,7 @@ function BulkAddModal({ scores, onAdd, onClose, t }) {
     })
   }
 
-  const filtered = scores.filter(sc => sc.name.toLowerCase().includes(query.toLowerCase()))
+  const filtered = scores.filter(sc => !existingIds.has(sc.id) && sc.name.toLowerCase().includes(query.toLowerCase()))
 
   return (
     <div className={s.modalBackdrop} onClick={onClose}>
