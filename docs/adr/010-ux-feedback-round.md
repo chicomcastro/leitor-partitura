@@ -24,3 +24,9 @@ After real-device testing on a tablet, five UX issues were identified:
 4. **Checkbox UX**: Replaced clickable button-style playlist items with `<label>` + `<input type="checkbox">` for clear selection affordance. Uses `:has(input:checked)` for active styling.
 
 5. **Half-page scroll**: Changed from `pageElement.offsetHeight * 0.5` to `viewport.clientHeight * 0.47`. Using viewport height ensures the scroll distance matches what the user sees, and the 0.47 factor provides a safety margin to avoid overshooting.
+
+6. **Multi-select playlists**: The add-to-playlist modal now allows selecting multiple playlists at once (Set-based state instead of single ID). The score is added to all selected playlists with the same page range.
+
+7. **Bulk-add search + dedup**: The bulk-add modal includes a text search field to filter scores by name, and hides scores already present in the active playlist.
+
+8. **Delete/remove confirmation**: Both score deletion and playlist item removal now require a `confirm()` dialog before executing, preventing accidental data loss.
