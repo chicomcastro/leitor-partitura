@@ -345,6 +345,13 @@
   color: var(--text);
 }
 
+/* anchor edit bar — sits clearly above the bottom toolbar (which is ~88px tall
+   plus the safe-area inset) so the two control bars never overlap */
+.anchorEditBar {
+  composes: annotBar;
+  bottom: calc(118px + env(safe-area-inset-bottom));
+}
+
 /* anchor edit hint */
 .anchorHint {
   position: absolute;

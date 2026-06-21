@@ -745,7 +745,7 @@ export default function Reader({
       )}
 
       {chromeVisible && pageMode === 'anchor' && editingAnchors && (
-        <div className={s.annotBar} style={{ gap: 8 }}>
+        <div className={s.anchorEditBar} style={{ gap: 8 }}>
           <button className={s.colorSwatch} style={{ background: 'var(--accent)', color: '#fff' }} onClick={addAnchorHere} title={t('reader.anchorAddHere')} aria-label={t('reader.anchorAddHere')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" /></svg>
           </button>
