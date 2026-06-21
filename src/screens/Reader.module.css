@@ -345,6 +345,25 @@
   color: var(--text);
 }
 
+/* anchor edit hint */
+.anchorHint {
+  position: absolute;
+  bottom: 150px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 320px;
+  text-align: center;
+  background: rgba(22,28,42,.92);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  z-index: 10;
+  pointer-events: none;
+}
+
 /* panels */
 .panelBackdrop {
   position: absolute;
