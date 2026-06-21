@@ -427,8 +427,8 @@ export default function Library({
           totalPages={modal.totalPages || 1}
           onAdd={(plId, from, to) => {
             onAddToPlaylist(plId, modal.scoreId, from || undefined, to || undefined)
-            setModal(null)
           }}
+          onDone={() => setModal(null)}
           onCreatePlaylist={onCreatePlaylist}
           onClose={() => setModal(null)}
           t={t}
@@ -454,12 +454,21 @@ export default function Library({
   )
 }
 
-function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onCreatePlaylist, onClose, t }) {
-  const [selectedPl, setSelectedPl] = useState(null)
+function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onDone, onCreatePlaylist, onClose, t }) {
+  const [selectedPls, setSelectedPls] = useState(new Set())
   const [fromPage, setFromPage] = useState('')
   const [toPage, setToPage] = useState('')
   const [newName, setNewName] = useState('')
   const hasRange = totalPages > 1
+
+  const toggle = (id) => {
+    setSelectedPls(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const handleCreate = () => {
     const name = newName.trim()
@@ -481,8 +490,8 @@ function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onCreatePla
             <label key={p.id} className={s.checkboxLabel}>
               <input
                 type="checkbox"
-                checked={selectedPl === p.id}
-                onChange={() => setSelectedPl(selectedPl === p.id ? null : p.id)}
+                checked={selectedPls.has(p.id)}
+                onChange={() => toggle(p.id)}
               />
               {p.name}
               {p.items.some(item => (item.scoreId || item) === scoreId) ? ' ✓' : ''}
@@ -504,7 +513,7 @@ function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onCreatePla
           </button>
         </div>
 
-        {hasRange && selectedPl && (
+        {hasRange && selectedPls.size > 0 && (
           <div className={s.pageRangeRow}>
             <span className={s.pageRangeLabel}>{t('library.fromPage')}</span>
             <input
@@ -533,15 +542,16 @@ function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onCreatePla
           <button className={s.modalCancelBtn} onClick={onClose}>{t('modal.cancel')}</button>
           <button
             className={s.modalSaveBtn}
-            disabled={!selectedPl}
+            disabled={selectedPls.size === 0}
             onClick={() => {
-              if (!selectedPl) return
+              if (selectedPls.size === 0) return
               const from = fromPage ? Math.max(1, Math.min(totalPages, +fromPage)) : null
               const to = toPage ? Math.max(from || 1, Math.min(totalPages, +toPage)) : null
-              onAdd(selectedPl, from, to)
+              for (const plId of selectedPls) onAdd(plId, from, to)
+              onDone()
             }}
           >
-            {t('library.add')}
+            {t('library.add')} {selectedPls.size > 0 ? `(${selectedPls.size})` : ''}
           </button>
         </div>
       </div>
