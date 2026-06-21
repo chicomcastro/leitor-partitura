@@ -3,6 +3,7 @@ import { usePersistedState } from './hooks/usePersistedState'
 import { idbPut, idbDel } from './lib/db'
 import { idbGet } from './lib/db'
 import { loadPdfFromBuffer, evictDoc } from './lib/pdf'
+import { PLAYLIST_COLORS } from './lib/library'
 import Landing from './screens/Landing'
 import Library from './screens/Library'
 import Reader from './screens/Reader'
@@ -39,9 +40,14 @@ export default function App() {
   }, [])
 
   const openScore = useCallback((id) => {
+    setScores(prev => prev.map(s => s.id === id ? { ...s, lastOpenedAt: Date.now() } : s))
     setCurrentScoreId(id)
     setView('reader')
-  }, [])
+  }, [setScores])
+
+  const updateScore = useCallback((id, patch) => {
+    setScores(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
+  }, [setScores])
 
   const backToLibrary = useCallback(() => {
     setView('library')
@@ -79,13 +85,31 @@ export default function App() {
   }, [setScores, setPlaylists, setMarkersMap, setAnchorsMap])
 
   const createPlaylist = useCallback((name) => {
-    setPlaylists(prev => [...prev, { id: 'pl' + Date.now(), name, items: [] }])
+    setPlaylists(prev => [...prev, {
+      id: 'pl' + Date.now(),
+      name,
+      items: [],
+      color: PLAYLIST_COLORS[prev.length % PLAYLIST_COLORS.length],
+    }])
   }, [setPlaylists])
 
   const deletePlaylist = useCallback((plId) => {
     setPlaylists(prev => prev.filter(p => p.id !== plId))
     setActivePlaylist(prev => prev === plId ? null : prev)
   }, [setPlaylists, setActivePlaylist])
+
+  const updatePlaylist = useCallback((plId, patch) => {
+    setPlaylists(prev => prev.map(p => p.id === plId ? { ...p, ...patch } : p))
+  }, [setPlaylists])
+
+  const reorderPlaylists = useCallback((fromIndex, toIndex) => {
+    setPlaylists(prev => {
+      const arr = [...prev]
+      const [moved] = arr.splice(fromIndex, 1)
+      arr.splice(toIndex, 0, moved)
+      return arr
+    })
+  }, [setPlaylists])
 
   const addToPlaylist = useCallback((plId, scoreId, fromPage, toPage) => {
     const item = { scoreId }
@@ -174,10 +198,13 @@ export default function App() {
       activePlaylist={activePlaylist}
       setActivePlaylist={setActivePlaylist}
       onOpenScore={openScore}
+      onUpdateScore={updateScore}
       onImport={importFiles}
       onDelete={deleteScore}
       onCreatePlaylist={createPlaylist}
       onDeletePlaylist={deletePlaylist}
+      onUpdatePlaylist={updatePlaylist}
+      onReorderPlaylists={reorderPlaylists}
       onAddToPlaylist={addToPlaylist}
       onRemoveFromPlaylist={removeFromPlaylist}
       onReorderPlaylist={reorderPlaylist}

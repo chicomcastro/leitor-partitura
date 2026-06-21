@@ -43,13 +43,14 @@ test.describe('Library', () => {
   test('has playlist creation button', async ({ page }) => {
     await skipLanding(page)
     const btn = page.getByRole('button', { name: /nova playlist|new playlist/i })
-    await expect(btn).toBeVisible()
+    await expect(btn.first()).toBeVisible()
   })
 
-  test('has tabs with score count', async ({ page }) => {
+  test('has sidebar navigation', async ({ page }) => {
     await skipLanding(page)
-    const tab = page.getByRole('tab', { selected: true })
-    await expect(tab).toBeVisible()
+    await expect(page.getByRole('button', { name: /todas as partituras|all scores/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /favoritas|favorites/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /recentes|recent/i })).toBeVisible()
   })
 
   test('has search input', async ({ page }) => {

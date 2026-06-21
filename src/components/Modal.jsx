@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useI18n } from '../lib/i18n'
 import s from './Modal.module.css'
 
-export default function Modal({ title, onClose, onConfirm, placeholder, list, onSelect, emptyText, markerMode, totalPages }) {
+export default function Modal({ title, onClose, onConfirm, placeholder, initialValue, list, onSelect, emptyText, markerMode, totalPages }) {
   const { t } = useI18n()
-  const [text, setText] = useState('')
+  const [text, setText] = useState(initialValue || '')
   const [page, setPage] = useState(markerMode?.currentPage || 1)
   const panelRef = useRef(null)
 
