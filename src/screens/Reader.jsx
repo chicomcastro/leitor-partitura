@@ -284,14 +284,16 @@ export default function Reader({
     if (pageMode === 'half') {
       const v = viewerRef.current
       if (!v) return
-      v.scrollBy({ top: v.clientHeight * 0.47, behavior: 'smooth' })
+      const landscape = v.clientWidth > v.clientHeight
+      v.scrollBy({ top: v.clientHeight * (landscape ? 1 : 0.5), behavior: 'smooth' })
     } else gotoPage(currentPage + 1)
   }, [gotoPage, currentPage, pageMode])
   const prevPage = useCallback(() => {
     if (pageMode === 'half') {
       const v = viewerRef.current
       if (!v) return
-      v.scrollBy({ top: -v.clientHeight * 0.47, behavior: 'smooth' })
+      const landscape = v.clientWidth > v.clientHeight
+      v.scrollBy({ top: -v.clientHeight * (landscape ? 1 : 0.5), behavior: 'smooth' })
     } else gotoPage(currentPage - 1)
   }, [gotoPage, currentPage, pageMode])
   const goBackJump = useCallback(() => {
