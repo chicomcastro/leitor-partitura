@@ -25,6 +25,7 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
   const canvasRef = useRef(null)
   const drawnRef = useRef(null)
   const [imgUrl, setImgUrl] = useState(null)
+  const [loaded, setLoaded] = useState(false)
   const confirm = useConfirm()
 
   useEffect(() => {
@@ -42,6 +43,7 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
         canvas.width = vp.width
         canvas.height = vp.height
         await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise
+        setLoaded(true)
       })
       .catch(() => { drawnRef.current = null })
   }, [score.id, score.type])
@@ -73,8 +75,9 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
 
   const thumb = (
     <div className={s.thumbWrap}>
+      {!loaded && <div className={s.thumbSkeleton} aria-hidden="true" />}
       {score.type === 'image'
-        ? <img src={imgUrl} className={s.thumbCanvas} alt={score.name} />
+        ? <img src={imgUrl} className={s.thumbCanvas} alt={score.name} onLoad={() => setLoaded(true)} />
         : <canvas ref={canvasRef} className={s.thumbCanvas} />
       }
     </div>
