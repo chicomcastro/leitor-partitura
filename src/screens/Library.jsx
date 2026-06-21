@@ -65,7 +65,7 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
       </button>
       {inPlaylist && onRemove && (
-        <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); onRemove() }} title={t('library.removeFromPlaylist')} aria-label={t('library.removeFromPlaylist')}>
+        <button className={s.iconBtnRemove} onClick={(e) => { e.stopPropagation(); if (confirm(`${t('library.removeFromPlaylist')}?`)) onRemove() }} title={t('library.removeFromPlaylist')} aria-label={t('library.removeFromPlaylist')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19,13H5V11H19V13Z" /></svg>
         </button>
       )}
