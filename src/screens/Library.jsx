@@ -439,7 +439,7 @@ export default function Library({
         <BulkAddModal
           scores={scores}
           existingIds={new Set((activePl?.items || []).map(item => item.scoreId || item))}
-          onAdd={(ids) => { ids.forEach(id => onAddToPlaylist(activePlaylist, id)) }}
+          onAdd={(items) => { items.forEach(({ id, from, to }) => onAddToPlaylist(activePlaylist, id, from || undefined, to || undefined)) }}
           onClose={() => setModal(null)}
           t={t}
         />
@@ -561,18 +561,23 @@ function AddToPlaylistModal({ playlists, scoreId, totalPages, onAdd, onDone, onC
 }
 
 function BulkAddModal({ scores, existingIds, onAdd, onClose, t }) {
-  const [selected, setSelected] = useState(new Set())
+  const [selected, setSelected] = useState({})
   const [query, setQuery] = useState('')
 
   const toggle = (id) => {
     setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      const next = { ...prev }
+      if (next[id]) delete next[id]
+      else next[id] = { from: '', to: '' }
       return next
     })
   }
 
+  const setRange = (id, field, val) => {
+    setSelected(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }))
+  }
+
+  const count = Object.keys(selected).length
   const filtered = scores.filter(sc => !existingIds.has(sc.id) && sc.name.toLowerCase().includes(query.toLowerCase()))
 
   return (
@@ -589,24 +594,60 @@ function BulkAddModal({ scores, existingIds, onAdd, onClose, t }) {
         />
         <div className={s.bulkList}>
           {filtered.map(sc => (
-            <label key={sc.id} className={s.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={selected.has(sc.id)}
-                onChange={() => toggle(sc.id)}
-              />
-              {sc.name}
-            </label>
+            <div key={sc.id}>
+              <label className={s.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={!!selected[sc.id]}
+                  onChange={() => toggle(sc.id)}
+                />
+                {sc.name}
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>{sc.pages}p</span>
+              </label>
+              {selected[sc.id] && sc.pages > 1 && (
+                <div className={s.pageRangeRow} style={{ marginTop: 6, marginBottom: 4, paddingLeft: 30 }}>
+                  <span className={s.pageRangeLabel}>{t('library.fromPage')}</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={sc.pages}
+                    placeholder="1"
+                    className={s.pageRangeInput}
+                    value={selected[sc.id].from}
+                    onChange={e => setRange(sc.id, 'from', e.target.value)}
+                  />
+                  <span className={s.pageRangeLabel}>{t('library.toPage')}</span>
+                  <input
+                    type="number"
+                    min={selected[sc.id].from || 1}
+                    max={sc.pages}
+                    placeholder={String(sc.pages)}
+                    className={s.pageRangeInput}
+                    value={selected[sc.id].to}
+                    onChange={e => setRange(sc.id, 'to', e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
           ))}
         </div>
         <div className={s.modalFooter}>
           <button className={s.modalCancelBtn} onClick={onClose}>{t('modal.cancel')}</button>
           <button
             className={s.modalSaveBtn}
-            disabled={selected.size === 0}
-            onClick={() => { onAdd([...selected]); onClose() }}
+            disabled={count === 0}
+            onClick={() => {
+              const items = Object.entries(selected).map(([id, r]) => {
+                const sc = scores.find(s => s.id === id)
+                const from = r.from ? Math.max(1, Math.min(sc.pages, +r.from)) : null
+                const to = r.to ? Math.max(r.from ? +r.from : 1, Math.min(sc.pages, +r.to)) : null
+                return { id, from, to }
+              })
+              onAdd(items)
+              onClose()
+            }}
           >
-            {t('library.add')} ({selected.size})
+            {t('library.add')} ({count})
           </button>
         </div>
       </div>
