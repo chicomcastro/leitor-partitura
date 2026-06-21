@@ -23,6 +23,73 @@ jobs:
           path: dist
           retention-days: 1
 
+  coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run coverage
+      # Publish this run's summary so future PRs can diff against main.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.json
+          retention-days: 30
+      # Fetch the latest coverage summary from main to compute the delta.
+      - name: Download base coverage (main)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            try {
+              const { owner, repo } = context.repo
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: 'ci.yml', branch: 'main', status: 'success', per_page: 1,
+              })
+              if (!runs.data.workflow_runs.length) return core.info('no base run yet')
+              const run_id = runs.data.workflow_runs[0].id
+              const arts = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id })
+              const art = arts.data.artifacts.find(a => a.name === 'coverage-summary')
+              if (!art) return core.info('no base artifact')
+              const dl = await github.rest.actions.downloadArtifact({ owner, repo, artifact_id: art.id, archive_format: 'zip' })
+              fs.writeFileSync('base.zip', Buffer.from(dl.data))
+              core.info('base coverage downloaded')
+            } catch (e) {
+              core.info('base coverage fetch skipped: ' + e.message)
+            }
+      - name: Unzip base coverage
+        if: github.event_name == 'pull_request'
+        run: '[ -f base.zip ] && mkdir -p base-coverage && unzip -o base.zip -d base-coverage || echo "no base coverage"'
+      - name: Build coverage comment
+        run: node scripts/coverage-comment.mjs
+      - name: Post sticky coverage comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const body = fs.readFileSync('coverage-comment.md', 'utf8')
+            const marker = '<!-- coverage-report -->'
+            const { owner, repo } = context.repo
+            const issue_number = context.issue.number
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number })
+            const existing = comments.find(c => c.body && c.body.includes(marker))
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body })
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body })
+            }
+
   e2e:
     needs: build
     runs-on: ubuntu-latest

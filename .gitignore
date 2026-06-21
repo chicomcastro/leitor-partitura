@@ -7,3 +7,9 @@ playwright-report
 
 # Lighthouse CI static root (generated)
 lhroot/
+
+# Test coverage (generated)
+coverage/
+base-coverage/
+base.zip
+coverage-comment.md
