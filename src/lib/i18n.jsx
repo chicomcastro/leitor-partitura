@@ -158,6 +158,8 @@ const translations = {
     // Modal
     'modal.cancel': 'Cancelar',
     'modal.save': 'Salvar',
+    'modal.confirm': 'Confirmar',
+    'reader.micError': 'Não foi possível acessar o microfone. Verifique a permissão do navegador.',
     // Onboarding
     'onboarding.welcome': 'Boas-vindas ao Leitor de Partituras',
     'onboarding.skip': 'Pular',
@@ -345,6 +347,8 @@ const translations = {
     'recordings.delete': 'Delete',
     'modal.cancel': 'Cancel',
     'modal.save': 'Save',
+    'modal.confirm': 'Confirm',
+    'reader.micError': 'Could not access the microphone. Check the browser permission.',
     'onboarding.welcome': 'Welcome to Sheet Music Reader',
     'onboarding.skip': 'Skip',
     'onboarding.next': 'Next',
