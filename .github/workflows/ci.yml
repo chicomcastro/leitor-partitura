@@ -55,6 +55,9 @@ jobs:
         with:
           name: dist
           path: dist
+      # The app is built with base /leitor-partitura/, so mirror that path under
+      # the static root the Lighthouse server uses (otherwise the document 404s).
+      - run: mkdir -p lhroot/leitor-partitura && cp -r dist/. lhroot/leitor-partitura/
       - uses: treosh/lighthouse-ci-action@v12
         with:
           uploadArtifacts: true

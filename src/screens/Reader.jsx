@@ -16,6 +16,7 @@ export default function Reader({
   scoreId, scoreType, scoreName, onBack, fitMode, setFitMode,
   scrollSpeed, setScrollSpeed, bpm, setBpm, beats, setBeats,
   gestures, setGestures, markers, setMarkers,
+  anchors, setAnchors,
   recordingsMeta, setRecordingsMeta, playlistScores,
   playlists, onAddToPlaylist, onCreatePlaylist,
 }) {
@@ -29,6 +30,9 @@ export default function Reader({
   const lastTsRef = useRef(null)
   const pointerRef = useRef(null)
   const scoreRangesRef = useRef([])
+  const anchorLayerRef = useRef(null)
+  const anchorsRef = useRef(anchors)
+  anchorsRef.current = anchors
 
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -41,6 +45,7 @@ export default function Reader({
   const [modal, setModal] = useState(null)
   const [accent, setAccent] = useState(true)
   const [pageMode, setPageMode] = useState('full')
+  const [editingAnchors, setEditingAnchors] = useState(false)
   const [annotating, setAnnotating] = useState(false)
   const [annotColor, setAnnotColor] = useState('#E73B4C')
   const [erasing, setErasingState] = useState(false)
@@ -280,22 +285,103 @@ export default function Reader({
     if (o) v.scrollTo({ top: o.wrap.offsetTop - 16, behavior: 'smooth' })
   }, [currentPage])
 
+  // --- custom anchors ---
+  // An anchor is { id, page, frac } where page is the 1-based global page index
+  // and frac (0..1) is the vertical position within that page wrapper. Storing it
+  // relative to the page keeps anchors stable across re-renders (resize, fit mode).
+  const ANCHOR_OFFSET = 16
+
+  const getWrapBox = useCallback((wrap) => {
+    const v = viewerRef.current
+    if (!v || !wrap) return null
+    const top = wrap.getBoundingClientRect().top - v.getBoundingClientRect().top + v.scrollTop
+    return { top, height: wrap.getBoundingClientRect().height }
+  }, [])
+
+  // Absolute scroll position (content space) for an anchor, or null if its page is gone.
+  const anchorY = useCallback((a) => {
+    const obj = wrappersRef.current[a.page - 1]
+    if (!obj) return null
+    const box = getWrapBox(obj.wrap)
+    if (!box) return null
+    return box.top + a.frac * box.height
+  }, [getWrapBox])
+
+  // Convert an absolute content-space Y into the nearest { page, frac }.
+  const yToAnchor = useCallback((absY) => {
+    const list = wrappersRef.current
+    if (!list.length) return null
+    let best = null
+    for (const obj of list) {
+      const box = getWrapBox(obj.wrap)
+      if (!box) continue
+      if (absY >= box.top && absY <= box.top + box.height) {
+        return { page: obj.i, frac: box.height ? (absY - box.top) / box.height : 0 }
+      }
+      const dist = absY < box.top ? box.top - absY : absY - (box.top + box.height)
+      if (!best || dist < best.dist) {
+        best = { dist, page: obj.i, frac: absY < box.top ? 0 : 1 }
+      }
+    }
+    return best ? { page: best.page, frac: best.frac } : null
+  }, [getWrapBox])
+
+  const buildAutoAnchors = useCallback(() => {
+    const list = []
+    for (const obj of wrappersRef.current) {
+      list.push({ id: `a${obj.i}t`, page: obj.i, frac: 0 })
+      list.push({ id: `a${obj.i}m`, page: obj.i, frac: 0.5 })
+    }
+    return list
+  }, [])
+
+  const addAnchorHere = useCallback(() => {
+    const v = viewerRef.current
+    if (!v) return
+    const a = yToAnchor(v.scrollTop + ANCHOR_OFFSET)
+    if (!a) return
+    setAnchors(prev => [...prev, { id: 'a' + Date.now() + Math.floor(Math.random() * 1000), ...a }])
+  }, [yToAnchor, setAnchors])
+
+  // Scroll to the next/previous anchor relative to the current scroll position.
+  const gotoAnchor = useCallback((dir) => {
+    const v = viewerRef.current
+    if (!v) return false
+    const ys = anchorsRef.current
+      .map(anchorY)
+      .filter(y => y != null)
+      .sort((a, b) => a - b)
+    if (!ys.length) return false
+    const cur = v.scrollTop
+    let target = null
+    if (dir > 0) {
+      for (const y of ys) { if (y - ANCHOR_OFFSET > cur + 2) { target = y; break } }
+    } else {
+      for (let i = ys.length - 1; i >= 0; i--) { if (ys[i] - ANCHOR_OFFSET < cur - 2) { target = ys[i]; break } }
+    }
+    if (target == null) return false
+    v.scrollTo({ top: Math.max(0, target - ANCHOR_OFFSET), behavior: 'smooth' })
+    return true
+  }, [anchorY])
+
   const nextPage = useCallback(() => {
+    if (pageMode === 'anchor') { if (gotoAnchor(1)) return }
     if (pageMode === 'half') {
       const v = viewerRef.current
       if (!v) return
       const landscape = v.clientWidth > v.clientHeight
       v.scrollBy({ top: v.clientHeight * (landscape ? 1 : 0.5), behavior: 'smooth' })
     } else gotoPage(currentPage + 1)
-  }, [gotoPage, currentPage, pageMode])
+  }, [gotoPage, currentPage, pageMode, gotoAnchor])
   const prevPage = useCallback(() => {
+    if (pageMode === 'anchor') { if (gotoAnchor(-1)) return }
     if (pageMode === 'half') {
       const v = viewerRef.current
       if (!v) return
       const landscape = v.clientWidth > v.clientHeight
       v.scrollBy({ top: -v.clientHeight * (landscape ? 1 : 0.5), behavior: 'smooth' })
     } else gotoPage(currentPage - 1)
-  }, [gotoPage, currentPage, pageMode])
+  }, [gotoPage, currentPage, pageMode, gotoAnchor])
   const goBackJump = useCallback(() => {
     if (jumpStackRef.current.length) gotoPage(jumpStackRef.current.pop(), false)
   }, [gotoPage])
@@ -326,6 +412,83 @@ export default function Reader({
   }, [autoscroll, autoTick])
 
   const toggleAutoscroll = useCallback(() => setAutoscroll(a => !a), [])
+
+  // Seed top + middle anchors the first time anchor mode is used (or after a rebuild
+  // while still empty), so the user always has something to act on.
+  useEffect(() => {
+    if (pageMode === 'anchor' && wrappersRef.current.length && anchorsRef.current.length === 0) {
+      setAnchors(buildAutoAnchors())
+    }
+  }, [pageMode, annWrappers, buildAutoAnchors, setAnchors])
+
+  // Render the anchor overlay (dashed lines) directly inside the scroll container so
+  // the lines scroll with the pages. When editing, lines become draggable and gain a
+  // delete button.
+  useEffect(() => {
+    const v = viewerRef.current
+    if (!v) return
+    if (anchorLayerRef.current) { anchorLayerRef.current.remove(); anchorLayerRef.current = null }
+    if (pageMode !== 'anchor' || !wrappersRef.current.length) return
+
+    const layer = document.createElement('div')
+    layer.style.cssText = 'position:absolute;top:0;left:0;right:0;height:0;z-index:6;pointer-events:none;'
+    v.appendChild(layer)
+    anchorLayerRef.current = layer
+
+    anchors.forEach((a, idx) => {
+      const y = anchorY(a)
+      if (y == null) return
+      const line = document.createElement('div')
+      line.style.cssText = `position:absolute;left:8px;right:8px;top:${y}px;height:0;border-top:2px dashed ${editingAnchors ? 'rgba(231,59,76,.95)' : 'rgba(231,59,76,.4)'};`
+      layer.appendChild(line)
+
+      const badge = document.createElement('div')
+      badge.textContent = idx + 1
+      badge.style.cssText = 'position:absolute;left:0;top:-9px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;'
+      line.appendChild(badge)
+
+      if (!editingAnchors) return
+
+      line.style.borderTopWidth = '3px'
+      line.style.cursor = 'ns-resize'
+      line.style.pointerEvents = 'auto'
+
+      const del = document.createElement('button')
+      del.setAttribute('aria-label', t('reader.anchorRemove'))
+      del.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" /></svg>'
+      del.style.cssText = 'position:absolute;right:0;top:-13px;width:26px;height:26px;border:none;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;'
+      line.appendChild(del)
+      del.addEventListener('pointerdown', e => e.stopPropagation())
+      del.addEventListener('click', e => {
+        e.stopPropagation()
+        setAnchors(prev => prev.filter(x => x.id !== a.id))
+      })
+
+      let dragging = null
+      line.addEventListener('pointerdown', e => {
+        if (del.contains(e.target)) return
+        e.stopPropagation()
+        e.preventDefault()
+        dragging = { startClientY: e.clientY, startTop: y }
+        line.setPointerCapture?.(e.pointerId)
+      })
+      line.addEventListener('pointermove', e => {
+        if (!dragging) return
+        e.stopPropagation()
+        line.style.top = Math.max(0, dragging.startTop + (e.clientY - dragging.startClientY)) + 'px'
+      })
+      line.addEventListener('pointerup', e => {
+        if (!dragging) return
+        e.stopPropagation()
+        const nt = Math.max(0, dragging.startTop + (e.clientY - dragging.startClientY))
+        dragging = null
+        const na = yToAnchor(nt)
+        if (na) setAnchors(prev => prev.map(x => x.id === a.id ? { ...x, page: na.page, frac: na.frac } : x))
+      })
+    })
+
+    return () => { if (anchorLayerRef.current) { anchorLayerRef.current.remove(); anchorLayerRef.current = null } }
+  }, [anchors, annWrappers, pageMode, editingAnchors, anchorY, yToAnchor, setAnchors, t])
 
   // gesture actions
   const doAction = useCallback((action) => {
@@ -465,6 +628,13 @@ export default function Reader({
     onBack()
   }
 
+  const cycleScrollMode = () => setPageMode(m => {
+    const next = m === 'full' ? 'half' : m === 'half' ? 'anchor' : 'full'
+    if (next !== 'anchor') setEditingAnchors(false)
+    return next
+  })
+  const scrollModeLabel = pageMode === 'full' ? t('reader.fullPage') : pageMode === 'half' ? t('reader.halfPage') : t('reader.anchorScroll')
+
   const displayName = isPlaylist ? currentPieceName : scoreName
 
   return (
@@ -511,9 +681,13 @@ export default function Reader({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M10,17V19H5V14H7V17H10Z" /></svg>
               {fitMode === 'page' ? t('reader.fitPage') : fitMode === 'dual' ? t('reader.fitDual') : t('reader.fitWidth')}
             </button>
-            <button className={s.fitBtn} onClick={() => setPageMode(m => m === 'full' ? 'half' : 'full')} aria-label={`${t('reader.scrollModeLabel')}: ${pageMode === 'full' ? t('reader.fullPage') : t('reader.halfPage')}`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z" /></svg>
-              {pageMode === 'full' ? t('reader.fullPage') : t('reader.halfPage')}
+            <button className={s.fitBtn} onClick={cycleScrollMode} aria-label={`${t('reader.scrollModeLabel')}: ${scrollModeLabel}`}>
+              {pageMode === 'anchor' ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H16V9H13V17.9C15.28,17.44 17,15.42 17,13H19A7,7 0 0,1 12,20A7,7 0 0,1 5,13H7C7,15.42 8.72,17.44 11,17.9V9H8V7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2Z" /></svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z" /></svg>
+              )}
+              {scrollModeLabel}
             </button>
           </div>
 
@@ -570,6 +744,28 @@ export default function Reader({
         </div>
       )}
 
+      {chromeVisible && pageMode === 'anchor' && editingAnchors && (
+        <div className={s.annotBar} style={{ gap: 8 }}>
+          <button className={s.colorSwatch} style={{ background: 'var(--accent)', color: '#fff' }} onClick={addAnchorHere} title={t('reader.anchorAddHere')} aria-label={t('reader.anchorAddHere')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" /></svg>
+          </button>
+          <button className={`${s.colorSwatch} ${s.eraserSwatch}`} onClick={() => setAnchors(buildAutoAnchors())} title={t('reader.anchorAuto')} aria-label={t('reader.anchorAuto')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5,5.6L10,7L8.6,4.5L10,2L7.5,3.4L5,2L6.4,4.5L5,7L7.5,5.6M19.5,15.4L17,14L18.4,16.5L17,19L19.5,17.6L22,19L20.6,16.5L22,14L19.5,15.4M22,2L19.5,3.4L17,2L18.4,4.5L17,7L19.5,5.6L22,7L20.6,4.5L22,2M13.34,12.78L15.78,10.34L13.66,8.22L11.22,10.66L13.34,12.78M14.37,7.29L16.71,9.63C17.1,10 17.1,10.65 16.71,11.04L5.04,22.71C4.65,23.1 4,23.1 3.63,22.71L1.29,20.37C0.9,20 0.9,19.35 1.29,18.96L12.96,7.29C13.35,6.9 14,6.9 14.37,7.29Z" /></svg>
+          </button>
+          <button className={`${s.colorSwatch} ${s.eraserSwatch}`} onClick={() => setAnchors([])} title={t('reader.anchorClear')} aria-label={t('reader.anchorClear')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
+          </button>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700, minWidth: 22, textAlign: 'center' }}>{anchors.length}</span>
+          <button onClick={() => setEditingAnchors(false)} style={{ border: 'none', borderRadius: 9, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: 'var(--accent)', color: '#fff' }}>
+            {t('reader.anchorDone')}
+          </button>
+        </div>
+      )}
+
+      {chromeVisible && pageMode === 'anchor' && editingAnchors && anchors.length === 0 && (
+        <div className={s.anchorHint}>{t('reader.anchorHint')}</div>
+      )}
+
       {chromeVisible && (
         <div className={s.bottomBar}>
           <div className={s.toolbar}>
@@ -598,6 +794,11 @@ export default function Reader({
             <button className={annotating ? s.toolBtnActive : s.toolBtnGhost} onClick={() => setAnnotating(a => !a)} title={t('reader.annotate')} aria-label={t('reader.annotate')} aria-pressed={annotating}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" /></svg>
             </button>
+            {pageMode === 'anchor' && (
+              <button className={editingAnchors ? s.toolBtnActive : s.toolBtnGhost} onClick={() => setEditingAnchors(e => !e)} title={t('reader.editAnchors')} aria-label={t('reader.editAnchors')} aria-pressed={editingAnchors}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H16V9H13V17.9C15.28,17.44 17,15.42 17,13H19A7,7 0 0,1 12,20A7,7 0 0,1 5,13H7C7,15.42 8.72,17.44 11,17.9V9H8V7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2Z" /></svg>
+              </button>
+            )}
             <button className={s.toolBtnGhost} onClick={() => setShowGestures(true)} title={t('reader.gestures')} aria-label={t('reader.gestures')}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" /></svg>
             </button>

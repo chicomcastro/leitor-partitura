@@ -16,6 +16,7 @@ export default function App() {
   const [scores, setScores] = usePersistedState('sp.scores', [])
   const [playlists, setPlaylists] = usePersistedState('sp.playlists', [])
   const [markersMap, setMarkersMap] = usePersistedState('sp.markers', {})
+  const [anchorsMap, setAnchorsMap] = usePersistedState('sp.anchors', {})
   const [recordingsMeta, setRecordingsMeta] = usePersistedState('sp.recordings', [])
   const [gestures, setGestures] = usePersistedState('sp.gestures', {
     tapLeft: 'prev', tapRight: 'next', tap2: 'metro', tap3: 'none',
@@ -72,9 +73,10 @@ export default function App() {
       items: p.items.filter(item => (item.scoreId || item) !== id)
     })))
     setMarkersMap(prev => { const next = { ...prev }; delete next[id]; return next })
+    setAnchorsMap(prev => { const next = { ...prev }; delete next[id]; return next })
     idbDel('pdfs', id)
     evictDoc(id)
-  }, [setScores, setPlaylists, setMarkersMap])
+  }, [setScores, setPlaylists, setMarkersMap, setAnchorsMap])
 
   const createPlaylist = useCallback((name) => {
     setPlaylists(prev => [...prev, { id: 'pl' + Date.now(), name, items: [] }])
@@ -141,6 +143,8 @@ export default function App() {
         setGestures={setGestures}
         markers={markersMap[markersKey] || []}
         setMarkers={(markers) => setMarkersMap(prev => ({ ...prev, [markersKey]: markers }))}
+        anchors={anchorsMap[markersKey] || []}
+        setAnchors={(anchors) => setAnchorsMap(prev => ({ ...prev, [markersKey]: typeof anchors === 'function' ? anchors(prev[markersKey] || []) : anchors }))}
         recordingsMeta={recordingsMeta}
         setRecordingsMeta={setRecordingsMeta}
         playlistScores={playlistScores}
