@@ -12,9 +12,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev        # Vite dev server at localhost:5173/leitor-partitura/
 npm run build      # Production build → dist/
 npm run preview    # Preview production build
+npm test           # Unit tests (Vitest, jsdom)
+npm run coverage   # Unit tests + v8 coverage report → coverage/
+npm run test:e2e   # Playwright end-to-end tests
 ```
 
 If `npx vite` doesn't work, use `./node_modules/.bin/vite` directly.
+
+Unit tests live next to the code as `*.test.js` under `src/`. CI runs them with
+coverage and posts a sticky coverage comment on each PR (see `.github/workflows/ci.yml`
+and `scripts/coverage-comment.mjs`). IndexedDB is provided in tests via `fake-indexeddb`.
 
 ## Architecture
 
