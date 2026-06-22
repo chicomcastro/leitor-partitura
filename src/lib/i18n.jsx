@@ -69,6 +69,7 @@ const translations = {
     'library.emptyRecents': 'Nada recente',
     'library.emptyRecentsText': 'As partituras que você abrir aparecem aqui.',
     'library.save': 'Salvar',
+    'library.reorder': 'Arrastar para reordenar',
     // Reader
     'reader.back': 'Voltar para a estante',
     'reader.page': 'Página',
@@ -263,6 +264,7 @@ const translations = {
     'library.emptyRecents': 'Nothing recent',
     'library.emptyRecentsText': 'Scores you open show up here.',
     'library.save': 'Save',
+    'library.reorder': 'Drag to reorder',
     'reader.back': 'Back to music stand',
     'reader.page': 'Page',
     'reader.pageOf': 'of',

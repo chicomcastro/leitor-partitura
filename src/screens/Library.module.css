@@ -971,6 +971,45 @@
 .plRow:hover .plEditBtn, .plRowActive .plEditBtn { display: flex; }
 .plEditBtn:hover { color: var(--text-white); background: var(--border-light); }
 
+/* drag-to-reorder grips + feedback */
+.plGrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: grab;
+  width: 22px;
+  height: 30px;
+  flex: none;
+  margin-left: -4px;
+  touch-action: none;
+}
+.plGrip:active { cursor: grabbing; }
+
+.reordering { opacity: 0.4; }
+.reorderOver { box-shadow: inset 0 2px 0 var(--accent); }
+
+.gripOverlay { position: absolute; top: 8px; left: 8px; z-index: 2; }
+.listGrip { display: flex; align-items: center; flex: none; }
+
+.cardGrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(13,17,28,.7);
+  color: rgba(255,255,255,.8);
+  cursor: grab;
+  backdrop-filter: blur(4px);
+  touch-action: none;
+}
+.cardGrip:active { cursor: grabbing; }
+
 .main {
   flex: 1;
   min-width: 0;

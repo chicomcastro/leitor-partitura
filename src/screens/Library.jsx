@@ -8,6 +8,7 @@ import {
 } from '../lib/library'
 import { useI18n } from '../lib/i18n'
 import { useToast, useConfirm } from '../lib/ui'
+import { useDragReorder } from '../hooks/useDragReorder'
 import Modal from '../components/Modal'
 import Onboarding from '../components/Onboarding'
 import s from './Library.module.css'
@@ -21,7 +22,7 @@ function StarIcon({ filled }) {
     : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12,15.39L8.24,17.66L9.23,13.38L5.91,10.5L10.29,10.13L12,6.09L13.71,10.13L18.09,10.5L14.77,13.38L15.76,17.66M22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27L18.18,21L16.54,13.97L22,9.24Z" /></svg>
 }
 
-function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, onRemove, onToggleFavorite, onEdit, t, viewMode }) {
+function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, onRemove, onToggleFavorite, onEdit, dragHandle, t, viewMode }) {
   const canvasRef = useRef(null)
   const drawnRef = useRef(null)
   const [imgUrl, setImgUrl] = useState(null)
@@ -108,9 +109,16 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
     </>
   )
 
+  const gripBtn = dragHandle ? (
+    <button className={s.cardGrip} aria-label={t('library.reorder')} title={t('library.reorder')} onClick={e => e.stopPropagation()} {...dragHandle}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9,3H11V5H9V3M13,3H15V5H13V3M9,7H11V9H9V7M13,7H15V9H13V7M9,11H11V13H9V11M13,11H15V13H13V11M9,15H11V17H9V15M13,15H15V17H13V15M9,19H11V21H9V19M13,19H15V21H13V19Z" /></svg>
+    </button>
+  ) : null
+
   if (isList) {
     return (
       <div className={s.listItem} onClick={() => onOpen(score.id)}>
+        {gripBtn && <div className={s.listGrip} onClick={e => e.stopPropagation()}>{gripBtn}</div>}
         <div className={s.listThumb}>{thumb}</div>
         <div className={s.listInfo}>
           <div className={s.listName}>{score.name}</div>
@@ -127,6 +135,7 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
     <div className={s.card}>
       <div className={s.cardThumb} onClick={() => onOpen(score.id)}>
         {thumb}
+        {gripBtn && <div className={s.gripOverlay} onClick={e => e.stopPropagation()}>{gripBtn}</div>}
         <div className={s.favOverlay} onClick={e => e.stopPropagation()}>{favBtn}</div>
         <div className={s.cardName}>{score.name}</div>
         {score.composer && <div className={s.cardComposer}>{score.composer}</div>}
@@ -157,8 +166,8 @@ export default function Library({
   const [menuOpen, setMenuOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const menuRef = useRef(null)
-  const dragRef = useRef(null)
-  const plDragRef = useRef(null)
+  const playlistReorder = useDragReorder(onReorderPlaylists)
+  const itemReorder = useDragReorder((from, to) => onReorderPlaylist(activePlaylist, from, to))
 
   useEffect(() => {
     if (!menuOpen) return
@@ -423,26 +432,24 @@ export default function Library({
             </button>
           </div>
 
-          <div className={s.plList}>
+          <div className={s.plList} ref={query ? undefined : playlistReorder.containerRef}>
             {filteredPlaylists.length === 0 && (
               <div className={s.plEmpty}>{query ? t('library.noPlaylistsFound') : t('library.noPlaylists')}</div>
             )}
-            {filteredPlaylists.map((p) => {
-              const realIndex = playlists.indexOf(p)
+            {filteredPlaylists.map((p, i) => {
+              const dragging = !query && playlistReorder.active?.from === i
+              const over = !query && playlistReorder.active?.over === i && playlistReorder.active?.from !== i
               return (
                 <div
                   key={p.id}
-                  className={`${s.plRow} ${activePlaylist === p.id ? s.plRowActive : ''}`}
-                  draggable={!query}
-                  onDragStart={() => { plDragRef.current = realIndex }}
-                  onDragOver={e => { if (!query) e.preventDefault() }}
-                  onDrop={() => {
-                    const from = plDragRef.current
-                    if (from != null && from !== realIndex) onReorderPlaylists(from, realIndex)
-                    plDragRef.current = null
-                  }}
-                  onDragEnd={() => { plDragRef.current = null }}
+                  data-reorder
+                  className={`${s.plRow} ${activePlaylist === p.id ? s.plRowActive : ''} ${dragging ? s.reordering : ''} ${over ? s.reorderOver : ''}`}
                 >
+                  {!query && (
+                    <button className={s.plGrip} aria-label={t('library.reorder')} title={t('library.reorder')} {...playlistReorder.handleProps(i)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9,3H11V5H9V3M13,3H15V5H13V3M9,7H11V9H9V7M13,7H15V9H13V7M9,11H11V13H9V11M13,11H15V13H13V11M9,15H11V17H9V15M13,15H15V17H13V15M9,19H11V21H9V19M13,19H15V21H13V19Z" /></svg>
+                    </button>
+                  )}
                   <span className={s.plColorDot} style={{ background: p.color || PLAYLIST_COLORS[0] }} />
                   <button className={s.plName} onClick={() => selectPlaylist(p.id)} title={p.name}>{p.name}</button>
                   <span className={s.plCount}>{p.items.length}</span>
@@ -514,38 +521,40 @@ export default function Library({
           )}
 
           {visibleItems.length > 0 ? (
-            <div className={`${viewMode === 'list' ? s.list : s.grid} ${s[viewMode.replace('-', '')]}`} role="list" aria-label={t('library.scores')}>
-              {visibleItems.map((item, idx) => (
-                <div
-                  key={inPlaylist ? `${item.score.id}_${item.itemIndex}` : item.score.id}
-                  role="listitem"
-                  draggable={inPlaylist}
-                  onDragStart={() => { dragRef.current = item.itemIndex ?? idx }}
-                  onDragOver={(e) => { if (inPlaylist) e.preventDefault() }}
-                  onDrop={() => {
-                    const fromIdx = dragRef.current
-                    const toIdx = item.itemIndex ?? idx
-                    if (inPlaylist && fromIdx !== null && fromIdx !== toIdx) onReorderPlaylist(activePlaylist, fromIdx, toIdx)
-                    dragRef.current = null
-                  }}
-                  onDragEnd={() => { dragRef.current = null }}
-                  style={inPlaylist ? { cursor: 'grab' } : undefined}
-                >
-                  <ScoreCard
-                    score={item.score}
-                    inPlaylist={inPlaylist}
-                    pageRange={item.pageRange}
-                    onOpen={onOpenScore}
-                    onDelete={onDelete}
-                    onAddOpen={(id) => setModal({ type: 'add', scoreId: id, totalPages: item.score.pages })}
-                    onRemove={item.itemIndex != null ? () => onRemoveFromPlaylist(activePlaylist, item.itemIndex) : null}
-                    onToggleFavorite={toggleFavorite}
-                    onEdit={(score) => setModal({ type: 'editScore', score })}
-                    t={t}
-                    viewMode={viewMode}
-                  />
-                </div>
-              ))}
+            <div
+              className={`${viewMode === 'list' ? s.list : s.grid} ${s[viewMode.replace('-', '')]}`}
+              role="list"
+              aria-label={t('library.scores')}
+              ref={inPlaylist && !query ? itemReorder.containerRef : undefined}
+            >
+              {visibleItems.map((item, idx) => {
+                const canReorder = inPlaylist && !query
+                const dragging = canReorder && itemReorder.active?.from === idx
+                const over = canReorder && itemReorder.active?.over === idx && itemReorder.active?.from !== idx
+                return (
+                  <div
+                    key={inPlaylist ? `${item.score.id}_${item.itemIndex}` : item.score.id}
+                    role="listitem"
+                    {...(canReorder ? { 'data-reorder': true } : {})}
+                    className={`${dragging ? s.reordering : ''} ${over ? s.reorderOver : ''}`}
+                  >
+                    <ScoreCard
+                      score={item.score}
+                      inPlaylist={inPlaylist}
+                      pageRange={item.pageRange}
+                      onOpen={onOpenScore}
+                      onDelete={onDelete}
+                      onAddOpen={(id) => setModal({ type: 'add', scoreId: id, totalPages: item.score.pages })}
+                      onRemove={item.itemIndex != null ? () => onRemoveFromPlaylist(activePlaylist, item.itemIndex) : null}
+                      onToggleFavorite={toggleFavorite}
+                      onEdit={(score) => setModal({ type: 'editScore', score })}
+                      dragHandle={canReorder ? itemReorder.handleProps(idx) : null}
+                      t={t}
+                      viewMode={viewMode}
+                    />
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div className={s.empty}>
