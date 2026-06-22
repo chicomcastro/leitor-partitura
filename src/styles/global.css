@@ -62,9 +62,28 @@ input[type=range]:focus-visible {
   50% { opacity: .35; }
 }
 
+/* Library <-> Reader navigation transition (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.24s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+::view-transition-old(root) { animation-name: vtFadeOut; }
+::view-transition-new(root) { animation-name: vtFadeInUp; }
+
+@keyframes vtFadeOut {
+  to { opacity: 0; }
+}
+@keyframes vtFadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none !important; }
 }

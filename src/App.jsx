@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { flushSync } from 'react-dom'
 import { usePersistedState } from './hooks/usePersistedState'
 import { idbPut, idbDel } from './lib/db'
 import { idbGet } from './lib/db'
@@ -39,19 +40,31 @@ export default function App() {
     }
   }, [])
 
+  // Animate Library <-> Reader with the View Transitions API where available
+  // (progressive enhancement; falls back to an instant swap otherwise).
+  const navigate = useCallback((apply) => {
+    if (typeof document !== 'undefined' && document.startViewTransition) {
+      document.startViewTransition(() => flushSync(apply))
+    } else {
+      apply()
+    }
+  }, [])
+
   const openScore = useCallback((id) => {
     setScores(prev => prev.map(s => s.id === id ? { ...s, lastOpenedAt: Date.now() } : s))
-    setCurrentScoreId(id)
-    setView('reader')
-  }, [setScores])
+    navigate(() => {
+      setCurrentScoreId(id)
+      setView('reader')
+    })
+  }, [setScores, navigate])
 
   const updateScore = useCallback((id, patch) => {
     setScores(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
   }, [setScores])
 
   const backToLibrary = useCallback(() => {
-    setView('library')
-  }, [])
+    navigate(() => setView('library'))
+  }, [navigate])
 
   const importFiles = useCallback(async (files) => {
     let updated = scores.slice()
