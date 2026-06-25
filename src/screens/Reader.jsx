@@ -42,6 +42,7 @@ export default function Reader({
   const [showMetro, setShowMetro] = useState(false)
   const [showGestures, setShowGestures] = useState(false)
   const [showRecordings, setShowRecordings] = useState(false)
+  const [showTools, setShowTools] = useState(false)
   const [modal, setModal] = useState(null)
   const [accent, setAccent] = useState(true)
   const [pageMode, setPageMode] = useState('full')
@@ -596,7 +597,7 @@ export default function Reader({
       else if (e.key === ' ') { e.preventDefault(); toggleAutoscroll() }
       else if (e.key === 'm' || e.key === 'M') metro.toggle()
       else if (e.key === 'r' || e.key === 'R') recorder.toggleRec()
-      else if (e.key === 'Escape') { setShowMetro(false); setShowGestures(false); setShowRecordings(false); setModal(null) }
+      else if (e.key === 'Escape') { setShowMetro(false); setShowGestures(false); setShowRecordings(false); setShowTools(false); setModal(null) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -788,25 +789,41 @@ export default function Reader({
                 <path d={recorder.recording ? 'M18,18H6V6H18V18Z' : 'M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z'} />
               </svg>
             </button>
-            <button className={s.toolBtnGhost} onClick={() => setShowRecordings(true)} title={t('reader.recordings')} aria-label={t('reader.recordings')}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9,3V15.5A3.5,3.5 0 0,1 5.5,19A3.5,3.5 0 0,1 2,15.5A3.5,3.5 0 0,1 5.5,12C6.04,12 6.55,12.12 7,12.34V6.47L9,6.06M15,3V15.5A3.5,3.5 0 0,1 11.5,19A3.5,3.5 0 0,1 8,15.5A3.5,3.5 0 0,1 11.5,12C12.04,12 12.55,12.12 13,12.34V3H15M21,3V15.5A3.5,3.5 0 0,1 17.5,19A3.5,3.5 0 0,1 14,15.5A3.5,3.5 0 0,1 17.5,12C18.04,12 18.55,12.12 19,12.34V3H21Z" /></svg>
-            </button>
-            <button className={annotating ? s.toolBtnActive : s.toolBtnGhost} onClick={() => setAnnotating(a => !a)} title={t('reader.annotate')} aria-label={t('reader.annotate')} aria-pressed={annotating}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" /></svg>
-            </button>
             {pageMode === 'anchor' && (
               <button className={editingAnchors ? s.toolBtnActive : s.toolBtnGhost} onClick={() => setEditingAnchors(e => !e)} title={t('reader.editAnchors')} aria-label={t('reader.editAnchors')} aria-pressed={editingAnchors}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H16V9H13V17.9C15.28,17.44 17,15.42 17,13H19A7,7 0 0,1 12,20A7,7 0 0,1 5,13H7C7,15.42 8.72,17.44 11,17.9V9H8V7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2Z" /></svg>
               </button>
             )}
-            <button className={s.toolBtnGhost} onClick={() => setShowGestures(true)} title={t('reader.gestures')} aria-label={t('reader.gestures')}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" /></svg>
-            </button>
-            {playlists && playlists.length > 0 && (
-              <button className={s.toolBtnGhost} onClick={() => setModal({ type: 'addToPlaylist' })} title={t('library.addToPlaylist')} aria-label={t('library.addToPlaylist')}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
+            <div className={s.moreWrap}>
+              <button className={(showTools || annotating) ? s.toolBtnActive : s.toolBtnGhost} onClick={() => setShowTools(v => !v)} title={t('reader.moreTools')} aria-label={t('reader.moreTools')} aria-expanded={showTools} aria-haspopup="menu">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16,12A2,2 0 0,1 18,10A2,2 0 0,1 20,12A2,2 0 0,1 18,14A2,2 0 0,1 16,12M10,12A2,2 0 0,1 12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12M4,12A2,2 0 0,1 6,10A2,2 0 0,1 8,12A2,2 0 0,1 6,14A2,2 0 0,1 4,12Z" /></svg>
               </button>
-            )}
+              {showTools && (
+                <>
+                  <div className={s.toolMenuScrim} onClick={() => setShowTools(false)} />
+                  <div className={s.toolMenu} role="menu">
+                    <button className={`${s.toolMenuItem} ${annotating ? s.toolMenuItemActive : ''}`} role="menuitem" onClick={() => { setShowTools(false); setAnnotating(a => !a) }} aria-pressed={annotating}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" /></svg>
+                      {t('reader.annotate')}
+                    </button>
+                    <button className={s.toolMenuItem} role="menuitem" onClick={() => { setShowTools(false); setShowRecordings(true) }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9,3V15.5A3.5,3.5 0 0,1 5.5,19A3.5,3.5 0 0,1 2,15.5A3.5,3.5 0 0,1 5.5,12C6.04,12 6.55,12.12 7,12.34V6.47L9,6.06M15,3V15.5A3.5,3.5 0 0,1 11.5,19A3.5,3.5 0 0,1 8,15.5A3.5,3.5 0 0,1 11.5,12C12.04,12 12.55,12.12 13,12.34V3H15M21,3V15.5A3.5,3.5 0 0,1 17.5,19A3.5,3.5 0 0,1 14,15.5A3.5,3.5 0 0,1 17.5,12C18.04,12 18.55,12.12 19,12.34V3H21Z" /></svg>
+                      {t('reader.recordings')}
+                    </button>
+                    <button className={s.toolMenuItem} role="menuitem" onClick={() => { setShowTools(false); setShowGestures(true) }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" /></svg>
+                      {t('reader.gestures')}
+                    </button>
+                    {playlists && playlists.length > 0 && (
+                      <button className={s.toolMenuItem} role="menuitem" onClick={() => { setShowTools(false); setModal({ type: 'addToPlaylist' }) }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16H10V18H2V16M2,11H14V13H2V11M2,6H14V8H2V6M16,11V14H13V16H16V19H18V16H21V14H18V11H16Z" /></svg>
+                        {t('library.addToPlaylist')}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
