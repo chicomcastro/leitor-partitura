@@ -4,6 +4,7 @@ import { getPdfDoc } from '../lib/pdf'
 import { useI18n } from '../lib/i18n'
 import { useMetronome } from '../hooks/useMetronome'
 import { useRecorder } from '../hooks/useRecorder'
+import { usePracticeTracker } from '../hooks/usePracticeTracker'
 import { useAnnotations } from '../hooks/useAnnotations'
 import { useAnnotationLayer } from '../components/AnnotationLayer'
 import MetronomePanel from '../components/MetronomePanel'
@@ -18,7 +19,7 @@ export default function Reader({
   gestures, setGestures, markers, setMarkers,
   anchors, setAnchors,
   recordingsMeta, setRecordingsMeta, playlistScores,
-  playlists, onAddToPlaylist, onCreatePlaylist,
+  playlists, onAddToPlaylist, onCreatePlaylist, onRecordPractice,
 }) {
   const { t } = useI18n()
   const viewerRef = useRef(null)
@@ -68,6 +69,12 @@ export default function Reader({
     return r.scoreId === scoreId
   })
   const recorder = useRecorder({ scoreId, scoreName, recordingsMeta, setRecordingsMeta })
+
+  // Track practice time for the open score (honest: visible + recent interaction).
+  const scoreIdRef = useRef(scoreId)
+  scoreIdRef.current = scoreId
+  const onPractice = useCallback((ms) => { onRecordPractice?.(ms, scoreIdRef.current) }, [onRecordPractice])
+  usePracticeTracker({ active: true, onPractice })
 
   const getBuffer = useCallback((id) => idbGet('pdfs', id), [])
 
