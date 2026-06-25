@@ -6,6 +6,8 @@ import { idbGet } from './lib/db'
 import { loadPdfFromBuffer, evictDoc } from './lib/pdf'
 import { PLAYLIST_COLORS } from './lib/library'
 import { addPractice, registerView, dayKey } from './lib/stats'
+import { pickCelebration, achievedMilestones } from './lib/milestones'
+import MilestoneModal from './components/MilestoneModal'
 import Landing from './screens/Landing'
 import Library from './screens/Library'
 import Reader from './screens/Reader'
@@ -30,6 +32,8 @@ export default function App() {
   const [scrollSpeed, setScrollSpeed] = usePersistedState('sp.speed', 45)
   const [fitMode, setFitMode] = usePersistedState('sp.fit', 'page')
   const [stats, setStats] = usePersistedState('sp.stats', { days: {}, views: {} })
+  const [seenMilestones, setSeenMilestones] = usePersistedState('sp.statsMilestones', [])
+  const [celebration, setCelebration] = useState(null)
 
   // Migrate old string-based playlist items to objects
   useEffect(() => {
@@ -41,6 +45,19 @@ export default function App() {
       })))
     }
   }, [])
+
+  // Surface a milestone celebration when back in the library (never interrupt
+  // practice in the Reader).
+  useEffect(() => {
+    if (view !== 'library') return
+    const m = pickCelebration(stats, new Date(), seenMilestones)
+    if (m) setCelebration(prev => prev || m)
+  }, [view, stats, seenMilestones])
+
+  const dismissCelebration = useCallback(() => {
+    setSeenMilestones(prev => Array.from(new Set([...prev, ...achievedMilestones(stats, new Date())])))
+    setCelebration(null)
+  }, [stats, setSeenMilestones])
 
   // Animate Library <-> Reader with the View Transitions API where available
   // (progressive enhancement; falls back to an instant swap otherwise).
@@ -213,26 +230,31 @@ export default function App() {
   }
 
   return (
-    <Library
-      scores={scores}
-      setScores={setScores}
-      playlists={playlists}
-      setPlaylists={setPlaylists}
-      activePlaylist={activePlaylist}
-      setActivePlaylist={setActivePlaylist}
-      onOpenScore={openScore}
-      onUpdateScore={updateScore}
-      onImport={importFiles}
-      onDelete={deleteScore}
-      onCreatePlaylist={createPlaylist}
-      onDeletePlaylist={deletePlaylist}
-      onUpdatePlaylist={updatePlaylist}
-      onReorderPlaylists={reorderPlaylists}
-      onAddToPlaylist={addToPlaylist}
-      onRemoveFromPlaylist={removeFromPlaylist}
-      onReorderPlaylist={reorderPlaylist}
-      stats={stats}
-      recordingsMeta={recordingsMeta}
-    />
+    <>
+      <Library
+        scores={scores}
+        setScores={setScores}
+        playlists={playlists}
+        setPlaylists={setPlaylists}
+        activePlaylist={activePlaylist}
+        setActivePlaylist={setActivePlaylist}
+        onOpenScore={openScore}
+        onUpdateScore={updateScore}
+        onImport={importFiles}
+        onDelete={deleteScore}
+        onCreatePlaylist={createPlaylist}
+        onDeletePlaylist={deletePlaylist}
+        onUpdatePlaylist={updatePlaylist}
+        onReorderPlaylists={reorderPlaylists}
+        onAddToPlaylist={addToPlaylist}
+        onRemoveFromPlaylist={removeFromPlaylist}
+        onReorderPlaylist={reorderPlaylist}
+        stats={stats}
+        recordingsMeta={recordingsMeta}
+      />
+      {celebration && (
+        <MilestoneModal milestone={celebration} stats={stats} scores={scores} onClose={dismissCelebration} />
+      )}
+    </>
   )
 }
