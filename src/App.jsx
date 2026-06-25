@@ -5,9 +5,10 @@ import { idbPut, idbDel } from './lib/db'
 import { idbGet } from './lib/db'
 import { loadPdfFromBuffer, evictDoc } from './lib/pdf'
 import { PLAYLIST_COLORS } from './lib/library'
-import { addPractice, registerView, dayKey } from './lib/stats'
+import { addPractice, registerView, dayKey, weekId, weekSummary } from './lib/stats'
 import { pickCelebration, achievedMilestones } from './lib/milestones'
 import MilestoneModal from './components/MilestoneModal'
+import RecapModal from './components/RecapModal'
 import Landing from './screens/Landing'
 import Library from './screens/Library'
 import Reader from './screens/Reader'
@@ -33,7 +34,10 @@ export default function App() {
   const [fitMode, setFitMode] = usePersistedState('sp.fit', 'page')
   const [stats, setStats] = usePersistedState('sp.stats', { days: {}, views: {} })
   const [seenMilestones, setSeenMilestones] = usePersistedState('sp.statsMilestones', [])
+  const [goalMin, setGoalMin] = usePersistedState('sp.goalMin', 0)
+  const [lastRecapWeek, setLastRecapWeek] = usePersistedState('sp.lastRecapWeek', '')
   const [celebration, setCelebration] = useState(null)
+  const [recap, setRecap] = useState(null)
 
   // Migrate old string-based playlist items to objects
   useEffect(() => {
@@ -58,6 +62,20 @@ export default function App() {
     setSeenMilestones(prev => Array.from(new Set([...prev, ...achievedMilestones(stats, new Date())])))
     setCelebration(null)
   }, [stats, setSeenMilestones])
+
+  // Weekly recap: once, at the start of a new week, summarize the previous week.
+  useEffect(() => {
+    if (view !== 'library') return
+    const now = new Date()
+    const wid = weekId(now)
+    if (lastRecapWeek && lastRecapWeek !== wid) {
+      const prevWeekDate = new Date(now)
+      prevWeekDate.setDate(prevWeekDate.getDate() - 7)
+      const summary = weekSummary(stats, scores, prevWeekDate)
+      if (summary.ms > 0) setRecap(prev => prev || summary)
+    }
+    if (lastRecapWeek !== wid) setLastRecapWeek(wid)
+  }, [view, stats, scores, lastRecapWeek, setLastRecapWeek])
 
   // Animate Library <-> Reader with the View Transitions API where available
   // (progressive enhancement; falls back to an instant swap otherwise).
@@ -251,10 +269,14 @@ export default function App() {
         onReorderPlaylist={reorderPlaylist}
         stats={stats}
         recordingsMeta={recordingsMeta}
+        goalMin={goalMin}
+        setGoalMin={setGoalMin}
       />
-      {celebration && (
+      {celebration ? (
         <MilestoneModal milestone={celebration} stats={stats} scores={scores} onClose={dismissCelebration} />
-      )}
+      ) : recap ? (
+        <RecapModal summary={recap} onClose={() => setRecap(null)} />
+      ) : null}
     </>
   )
 }

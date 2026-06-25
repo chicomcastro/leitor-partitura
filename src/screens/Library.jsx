@@ -153,7 +153,7 @@ export default function Library({
   scores, setScores, playlists, setPlaylists, activePlaylist, setActivePlaylist,
   onOpenScore, onUpdateScore, onImport, onDelete, onCreatePlaylist, onDeletePlaylist,
   onUpdatePlaylist, onReorderPlaylists, onAddToPlaylist, onRemoveFromPlaylist, onReorderPlaylist,
-  stats, recordingsMeta,
+  stats, recordingsMeta, goalMin, setGoalMin,
 }) {
   const { t, locale, changeLocale, LOCALES } = useI18n()
   const toast = useToast()
@@ -475,7 +475,7 @@ export default function Library({
 
         <main className={s.main} role="main">
           {showStats ? (
-            <StatsView stats={stats} scores={allScores} playlists={playlists} recordingsMeta={recordingsMeta} t={t} />
+            <StatsView stats={stats} scores={allScores} playlists={playlists} recordingsMeta={recordingsMeta} goalMin={goalMin} setGoalMin={setGoalMin} t={t} />
           ) : (<>
           <div className={s.mainTop}>
             <div className={s.mainTitleWrap}>

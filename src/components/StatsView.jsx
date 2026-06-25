@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react'
 import {
   totalMs, rangeMsDays, currentStreak, activeDays, heatmap, topScores, topComposers, formatDuration,
+  todayMs, goalProgress,
 } from '../lib/stats'
 import { buildShareSummary, drawShareCard, shareOrDownloadCard } from '../lib/shareCard'
 import s from './StatsView.module.css'
@@ -14,9 +15,14 @@ function heatColor(ms) {
   return '#E73B4C'
 }
 
-export default function StatsView({ stats, scores, playlists, recordingsMeta, t }) {
+const GOAL_OPTIONS = [0, 15, 30, 45, 60]
+
+export default function StatsView({ stats, scores, playlists, recordingsMeta, goalMin = 0, setGoalMin, t }) {
   const cardRef = useRef(null)
   const now = useMemo(() => new Date(), [])
+  const todayPracticed = todayMs(stats, now)
+  const progress = goalProgress(stats, now, goalMin)
+  const goalReached = goalMin > 0 && progress >= 1
 
   const total = totalMs(stats)
   const week = rangeMsDays(stats, now, 7)
@@ -73,6 +79,31 @@ export default function StatsView({ stats, scores, playlists, recordingsMeta, t 
         <div className={s.heroLabel}>{t('stats.heroLabel')}</div>
         <div className={s.heroValue}>{formatDuration(total)}</div>
         <div className={s.heroSub}>{t('stats.week')}: <strong>{formatDuration(week)}</strong></div>
+      </div>
+
+      <div className={s.goalCard}>
+        <div className={s.goalTop}>
+          <div className={s.goalLabel}>{t('stats.goal')}</div>
+          <div className={s.goalOpts}>
+            {GOAL_OPTIONS.map(g => (
+              <button
+                key={g}
+                className={`${s.goalOpt} ${goalMin === g ? s.goalOptActive : ''}`}
+                onClick={() => setGoalMin?.(g)}
+              >
+                {g === 0 ? t('stats.goalOff') : `${g}min`}
+              </button>
+            ))}
+          </div>
+        </div>
+        {goalMin > 0 && (
+          <div className={s.goalProgressRow}>
+            <div className={s.goalBarWrap}><div className={s.goalBar} style={{ width: `${progress * 100}%` }} /></div>
+            <div className={s.goalText}>
+              {goalReached ? t('stats.goalMet') : `${t('stats.today')}: ${formatDuration(todayPracticed)} / ${goalMin}min`}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={s.statRow}>
