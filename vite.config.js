@@ -9,9 +9,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Estante — Leitor de Partituras',
-        short_name: 'Estante',
-        description: 'Sua estante de partituras no tablet: leia, anote e ensaie. Offline e sem cadastro.',
+        name: 'TapScore — Leitor de Partituras',
+        short_name: 'TapScore',
+        description: 'Seu leitor de partituras no tablet: leia, anote e ensaie. Offline e sem cadastro.',
         theme_color: '#0D111C',
         background_color: '#0D111C',
         display: 'standalone',

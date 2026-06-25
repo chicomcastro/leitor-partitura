@@ -254,7 +254,7 @@ export default function Library({
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `estante-backup-${date}.estante`
+      a.download = `tapscore-backup-${date}.estante`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

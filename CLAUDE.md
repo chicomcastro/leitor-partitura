@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Estante** — a free, offline-first web sheet music reader for musicians on tablets. Alternative to forScore/MobileSheets. Deployed via GitHub Pages at `chicomcastro.github.io/leitor-partitura/`.
+**TapScore** — a free, offline-first web sheet music reader for musicians on tablets. Alternative to forScore/MobileSheets. Deployed via GitHub Pages at `chicomcastro.github.io/leitor-partitura/`. (The `.estante` backup extension is retained for backward compatibility.)
 
 ## Commands
 
