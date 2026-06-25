@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   emptyStats, dayKey, addPractice, registerView, totalMs, rangeMsDays,
   currentStreak, activeDays, heatmap, topScores, topComposers, formatDuration,
+  todayMs, startOfWeek, weekId, weekSummary, goalProgress,
 } from './stats'
 
 const D = (s) => new Date(s + 'T12:00:00')
@@ -99,6 +100,40 @@ describe('topScores & topComposers', () => {
   })
   it('ranks composers by total practice time', () => {
     expect(topComposers(stats, scores, 1)[0]).toEqual({ composer: 'Bach', ms: 5000 })
+  })
+})
+
+describe('todayMs & goalProgress', () => {
+  const stats = { days: { '2026-06-25': { ms: 900000 } } } // 15 min
+  it('todayMs returns today total', () => {
+    expect(todayMs(stats, D('2026-06-25'))).toBe(900000)
+    expect(todayMs(stats, D('2026-06-24'))).toBe(0)
+  })
+  it('goalProgress is a clamped fraction', () => {
+    expect(goalProgress(stats, D('2026-06-25'), 30)).toBeCloseTo(0.5)
+    expect(goalProgress(stats, D('2026-06-25'), 10)).toBe(1)
+    expect(goalProgress(stats, D('2026-06-25'), 0)).toBe(0)
+  })
+})
+
+describe('weeks', () => {
+  it('startOfWeek returns Monday; weekId is stable within a week', () => {
+    // 2026-06-25 is a Thursday → Monday is 2026-06-22
+    expect(dayKey(startOfWeek(D('2026-06-25')))).toBe('2026-06-22')
+    expect(weekId(D('2026-06-25'))).toBe(weekId(D('2026-06-22')))
+    expect(weekId(D('2026-06-21'))).not.toBe(weekId(D('2026-06-22')))
+  })
+  it('weekSummary aggregates the Mon–Sun window', () => {
+    const stats = { days: {
+      '2026-06-22': { ms: 1800000, byScore: { a: 1800000 } },
+      '2026-06-24': { ms: 120000, byScore: { b: 120000 } },
+      '2026-06-21': { ms: 999999, byScore: { a: 999999 } }, // previous week, excluded
+    } }
+    const scores = [{ id: 'a', name: 'Air' }, { id: 'b', name: 'Canon' }]
+    const sum = weekSummary(stats, scores, D('2026-06-25'))
+    expect(sum.ms).toBe(1920000)
+    expect(sum.activeDays).toBe(2)
+    expect(sum.topPiece).toBe('Air')
   })
 })
 

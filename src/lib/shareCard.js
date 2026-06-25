@@ -93,17 +93,23 @@ export function drawShareCard(canvas, summary, labels) {
   ctx.font = font(700, 150)
   ctx.fillText(summary.totalLabel, 92, 520)
 
-  // secondary row: week + streak
+  // secondary row: week + streak (omitted on the weekly-recap card)
   let y = 660
-  ctx.font = font(600, 40)
-  ctx.fillStyle = '#E73B4C'
-  ctx.fillText(`${labels.weekLabel}: `, 96, y)
-  const ww = ctx.measureText(`${labels.weekLabel}: `).width
-  ctx.fillStyle = '#fff'
-  ctx.fillText(summary.weekLabel, 96 + ww, y)
-  if (summary.streak > 0) {
-    ctx.fillStyle = '#F5B301'
-    ctx.fillText(`🔥 ${summary.streak} ${labels.daysLabel}`, 620, y)
+  if (summary.weekLabel) {
+    ctx.font = font(600, 40)
+    ctx.fillStyle = '#E73B4C'
+    ctx.fillText(`${labels.weekLabel}: `, 96, y)
+    const ww = ctx.measureText(`${labels.weekLabel}: `).width
+    ctx.fillStyle = '#fff'
+    ctx.fillText(summary.weekLabel, 96 + ww, y)
+    if (summary.streak > 0) {
+      ctx.fillStyle = '#F5B301'
+      ctx.fillText(`🔥 ${summary.streak} ${labels.daysLabel}`, 620, y)
+    }
+  } else if (summary.subtitle) {
+    ctx.font = font(600, 40)
+    ctx.fillStyle = '#8A93A6'
+    ctx.fillText(summary.subtitle, 96, y)
   }
 
   // top piece / composer

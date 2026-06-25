@@ -124,6 +124,50 @@ export function topComposers(stats, scores, n = 3) {
     .slice(0, n)
 }
 
+export function todayMs(stats, now) {
+  return stats?.days?.[dayKey(now)]?.ms || 0
+}
+
+// Monday (local) of the week containing `d`, at noon to avoid DST edges.
+export function startOfWeek(d) {
+  const r = new Date(d)
+  r.setHours(12, 0, 0, 0)
+  const offset = (r.getDay() + 6) % 7 // 0 = Monday
+  r.setDate(r.getDate() - offset)
+  return r
+}
+
+export function weekId(d) {
+  return dayKey(startOfWeek(d))
+}
+
+// Summary for the 7 days starting at `weekStart` (a Monday).
+export function weekSummary(stats, scores, weekStart) {
+  const start = startOfWeek(weekStart)
+  const end = addDays(start, 6)
+  let activeDays = 0
+  const byScore = {}
+  for (let d = new Date(start); dayKey(d) <= dayKey(end); d = addDays(d, 1)) {
+    const day = stats?.days?.[dayKey(d)]
+    if (!day) continue
+    if ((day.ms || 0) >= STREAK_MIN_MS) activeDays++
+    for (const [id, ms] of Object.entries(day.byScore || {})) byScore[id] = (byScore[id] || 0) + ms
+  }
+  const byId = new Map((scores || []).map(s => [s.id, s]))
+  const top = Object.entries(byScore).sort((a, b) => b[1] - a[1])[0]
+  return {
+    ms: rangeMs(stats, start, end),
+    activeDays,
+    topPiece: top ? (byId.get(top[0])?.name || null) : null,
+  }
+}
+
+// Fraction (0..1) of today's practice toward a daily goal in minutes.
+export function goalProgress(stats, now, goalMin) {
+  if (!goalMin || goalMin <= 0) return 0
+  return Math.min(1, todayMs(stats, now) / (goalMin * 60000))
+}
+
 // "1h 23min" / "23min" / "45s".
 export function formatDuration(ms) {
   if (!ms || ms < 1000) return '0min'
