@@ -9,6 +9,7 @@ import {
 import { useI18n } from '../lib/i18n'
 import { useToast, useConfirm } from '../lib/ui'
 import { useDragReorder } from '../hooks/useDragReorder'
+import BrandMark from '../components/BrandMark'
 import Modal from '../components/Modal'
 import Onboarding from '../components/Onboarding'
 import s from './Library.module.css'
@@ -355,7 +356,7 @@ export default function Library({
         </button>
         <div className={s.brand}>
           <div className={s.logo}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M21,3V15.5A3.5,3.5 0 0,1 17.5,19A3.5,3.5 0 0,1 14,15.5A3.5,3.5 0 0,1 17.5,12C18.04,12 18.55,12.12 19,12.34V6.47L9,8.6V17.5A3.5,3.5 0 0,1 5.5,21A3.5,3.5 0 0,1 2,17.5A3.5,3.5 0 0,1 5.5,14C6.04,14 6.55,14.12 7,14.34V6L21,3Z" /></svg>
+            <BrandMark size={22} />
           </div>
           <div>
             <div className={s.brandTitle}>{t('library.title')}</div>
