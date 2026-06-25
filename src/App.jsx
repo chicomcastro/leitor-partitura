@@ -5,6 +5,7 @@ import { idbPut, idbDel } from './lib/db'
 import { idbGet } from './lib/db'
 import { loadPdfFromBuffer, evictDoc } from './lib/pdf'
 import { PLAYLIST_COLORS } from './lib/library'
+import { addPractice, registerView, dayKey } from './lib/stats'
 import Landing from './screens/Landing'
 import Library from './screens/Library'
 import Reader from './screens/Reader'
@@ -28,6 +29,7 @@ export default function App() {
   const [beats, setBeats] = usePersistedState('sp.beats', 4)
   const [scrollSpeed, setScrollSpeed] = usePersistedState('sp.speed', 45)
   const [fitMode, setFitMode] = usePersistedState('sp.fit', 'page')
+  const [stats, setStats] = usePersistedState('sp.stats', { days: {}, views: {} })
 
   // Migrate old string-based playlist items to objects
   useEffect(() => {
@@ -52,11 +54,18 @@ export default function App() {
 
   const openScore = useCallback((id) => {
     setScores(prev => prev.map(s => s.id === id ? { ...s, lastOpenedAt: Date.now() } : s))
+    setStats(prev => registerView(prev, id))
     navigate(() => {
       setCurrentScoreId(id)
       setView('reader')
     })
-  }, [setScores, navigate])
+  }, [setScores, setStats, navigate])
+
+  // Stable so the practice tracker effect in Reader isn't reset on every render.
+  const recordPractice = useCallback((ms, scoreId) => {
+    if (!ms || ms < 1000) return
+    setStats(prev => addPractice(prev, { dateKey: dayKey(new Date()), ms, scoreId }))
+  }, [setStats])
 
   const updateScore = useCallback((id, patch) => {
     setScores(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
@@ -188,6 +197,7 @@ export default function App() {
         playlists={playlists}
         onAddToPlaylist={addToPlaylist}
         onCreatePlaylist={createPlaylist}
+        onRecordPractice={recordPractice}
       />
     )
   }
@@ -221,6 +231,8 @@ export default function App() {
       onAddToPlaylist={addToPlaylist}
       onRemoveFromPlaylist={removeFromPlaylist}
       onReorderPlaylist={reorderPlaylist}
+      stats={stats}
+      recordingsMeta={recordingsMeta}
     />
   )
 }

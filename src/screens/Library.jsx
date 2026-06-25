@@ -10,6 +10,7 @@ import { useI18n } from '../lib/i18n'
 import { useToast, useConfirm } from '../lib/ui'
 import { useDragReorder } from '../hooks/useDragReorder'
 import BrandMark from '../components/BrandMark'
+import StatsView from '../components/StatsView'
 import Modal from '../components/Modal'
 import Onboarding from '../components/Onboarding'
 import s from './Library.module.css'
@@ -152,6 +153,7 @@ export default function Library({
   scores, setScores, playlists, setPlaylists, activePlaylist, setActivePlaylist,
   onOpenScore, onUpdateScore, onImport, onDelete, onCreatePlaylist, onDeletePlaylist,
   onUpdatePlaylist, onReorderPlaylists, onAddToPlaylist, onRemoveFromPlaylist, onReorderPlaylist,
+  stats, recordingsMeta,
 }) {
   const { t, locale, changeLocale, LOCALES } = useI18n()
   const toast = useToast()
@@ -340,7 +342,8 @@ export default function Library({
     { id: 'recents', label: t('library.recents'), count: recents.length, icon: 'M13,3A9,9 0 0,0 4,12H1L4.89,15.89L4.96,16.03L9,12H6A7,7 0 0,1 13,5A7,7 0 0,1 20,12A7,7 0 0,1 13,19C11.07,19 9.32,18.21 8.06,16.94L6.64,18.36C8.27,20 10.5,21 13,21A9,9 0 0,0 22,12A9,9 0 0,0 13,3M12,8V13L16.28,15.54L17,14.33L13.5,12.25V8H12Z' },
   ]
 
-  const currentTitle = inPlaylist ? (activePl?.name || '') : navItems.find(n => n.id === section).label
+  const showStats = !inPlaylist && section === 'stats'
+  const currentTitle = inPlaylist ? (activePl?.name || '') : (navItems.find(n => n.id === section)?.label || '')
   const emptyForView = inPlaylist
     ? { title: t('library.emptyPlaylist'), text: t('library.emptyPlaylistText') }
     : section === 'favorites' ? { title: t('library.emptyFavorites'), text: t('library.emptyFavoritesText') }
@@ -424,6 +427,13 @@ export default function Library({
                 <span className={s.navCount}>{n.count}</span>
               </button>
             ))}
+            <button
+              className={`${s.navItem} ${!inPlaylist && section === 'stats' ? s.navItemActive : ''}`}
+              onClick={() => selectSection('stats')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3,13H7V21H3V13M10,8H14V21H10V8M17,3H21V21H17V3Z" /></svg>
+              <span className={s.navLabel}>{t('stats.nav')}</span>
+            </button>
           </nav>
 
           <div className={s.plSectionHeader}>
@@ -464,6 +474,9 @@ export default function Library({
         </aside>
 
         <main className={s.main} role="main">
+          {showStats ? (
+            <StatsView stats={stats} scores={allScores} playlists={playlists} recordingsMeta={recordingsMeta} t={t} />
+          ) : (<>
           <div className={s.mainTop}>
             <div className={s.mainTitleWrap}>
               <h2 className={s.viewTitle}>{currentTitle}</h2>
@@ -572,6 +585,7 @@ export default function Library({
               )}
             </div>
           )}
+          </>)}
         </main>
       </div>
 

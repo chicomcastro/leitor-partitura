@@ -3,6 +3,7 @@ import { idbGetAll, idbGet, idbPut } from './db'
 const LS_KEYS = [
   'sp.scores', 'sp.playlists', 'sp.markers', 'sp.recordings',
   'sp.gestures', 'sp.bpm', 'sp.beats', 'sp.speed', 'sp.fit',
+  'sp.anchors', 'sp.stats',
 ]
 
 function bufToBase64(buf) {
