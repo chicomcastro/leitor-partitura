@@ -70,10 +70,10 @@ export default function Reader({
   })
   const recorder = useRecorder({ scoreId, scoreName, recordingsMeta, setRecordingsMeta })
 
-  // Track practice time for the open score (honest: visible + recent interaction).
-  const scoreIdRef = useRef(scoreId)
-  scoreIdRef.current = scoreId
-  const onPractice = useCallback((ms) => { onRecordPractice?.(ms, scoreIdRef.current) }, [onRecordPractice])
+  // Track practice time for the piece on screen (honest: visible + recent interaction).
+  const currentScoreIdRef = useRef(scoreId)
+  useEffect(() => { currentScoreIdRef.current = scoreId }, [scoreId])
+  const onPractice = useCallback((ms) => { onRecordPractice?.(ms, currentScoreIdRef.current) }, [onRecordPractice])
   usePracticeTracker({ active: true, onPractice })
 
   const getBuffer = useCallback((id) => idbGet('pdfs', id), [])
@@ -267,12 +267,14 @@ export default function Reader({
         }
         setCurrentPage(cur)
 
-        // Update current piece name
+        // Update current piece name + id (so practice time is attributed to the
+        // piece actually on screen in a playlist, not just the opened one)
         const ranges = scoreRangesRef.current
         if (ranges.length > 0) {
           for (let r = ranges.length - 1; r >= 0; r--) {
             if (cur > ranges[r].offset) {
               setCurrentPieceName(ranges[r].name)
+              currentScoreIdRef.current = ranges[r].scoreId
               break
             }
           }

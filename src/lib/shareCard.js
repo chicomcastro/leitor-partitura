@@ -70,6 +70,20 @@ export function drawShareCard(canvas, summary, labels) {
   ctx.textBaseline = 'middle'
   ctx.fillText('TapScore', 228, 152)
 
+  // optional achievement badge (milestone celebrations)
+  if (summary.badge) {
+    ctx.font = font(700, 34)
+    const tw = ctx.measureText(summary.badge).width
+    const padX = 30, bh = 64, bx = 96, by = 250
+    ctx.fillStyle = 'rgba(231,59,76,.18)'
+    roundRect(ctx, bx, by, tw + padX * 2, bh, 32)
+    ctx.fill()
+    ctx.fillStyle = '#F2495A'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(summary.badge, bx + padX, by + bh / 2 + 2)
+    ctx.textBaseline = 'alphabetic'
+  }
+
   // hero: practice time
   ctx.fillStyle = '#8A93A6'
   ctx.font = font(600, 34)
