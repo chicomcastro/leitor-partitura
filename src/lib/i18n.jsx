@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useCallback } from 'react'
 const translations = {
   'pt-BR': {
     // Library
-    'library.title': 'Estante',
+    'library.title': 'TapScore',
     'library.subtitle': 'Leitor de partituras',
     'library.import': 'Importar',
     'library.newPlaylist': 'Nova playlist',
@@ -194,12 +194,12 @@ const translations = {
     'landing.feat6Text': 'Grave áudio direto no app pra ouvir depois. Sem sair da partitura.',
     'landing.bottomTitle': 'Pronto pra começar?',
     'landing.bottomText': 'Abra no tablet, importe uma partitura e bom ensaio.',
-    'landing.footer': 'Estante — Leitor de Partituras',
+    'landing.footer': 'TapScore — Leitor de Partituras',
     // Settings/general
     'language': 'Idioma',
   },
   'en': {
-    'library.title': 'Music Stand',
+    'library.title': 'TapScore',
     'library.subtitle': 'Sheet music reader',
     'library.import': 'Import',
     'library.newPlaylist': 'New playlist',
@@ -383,7 +383,7 @@ const translations = {
     'landing.feat6Text': 'Record audio right in the app to listen back later. Without leaving the score.',
     'landing.bottomTitle': 'Ready to start?',
     'landing.bottomText': 'Open on your tablet, import a score, and start rehearsing.',
-    'landing.footer': 'Estante — Sheet Music Reader',
+    'landing.footer': 'TapScore — Sheet Music Reader',
     'language': 'Language',
   },
 }

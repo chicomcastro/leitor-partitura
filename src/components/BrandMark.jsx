@@ -1,6 +1,6 @@
-// The Estante brand mark: abstract staff lines + a note head, evoking a shelf
+// The TapScore brand mark: abstract staff lines + a note head, evoking a shelf
 // of sheet music. Rendered white by default to sit inside the red logo tile.
-// See docs/adr/018-brand-identity.md.
+// See docs/adr/018-brand-identity.md and docs/adr/019-rename-to-tapscore.md.
 export default function BrandMark({ size = 24, color = '#fff' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
