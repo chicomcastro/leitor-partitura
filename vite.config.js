@@ -23,7 +23,11 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
+        // .mjs é essencial: o worker do pdf.js é emitido como pdf.worker.min-*.mjs.
+        // Sem ele no precache o app abre offline mas nenhuma partitura renderiza.
+        globPatterns: ['**/*.{js,mjs,css,html,png,svg,ico,woff2,json,wasm}'],
+        // o worker do pdf.js passa de 1 MB; o default do Workbox (2 MiB) é apertado demais
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
