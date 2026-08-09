@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { idbGet } from '../lib/db'
-import { getPdfDoc } from '../lib/pdf'
+import { getPdfDoc, pinDoc, unpinDoc } from '../lib/pdf'
 import { useI18n } from '../lib/i18n'
 import { useMetronome } from '../hooks/useMetronome'
 import { useRecorder } from '../hooks/useRecorder'
@@ -93,6 +93,7 @@ export default function Reader({
     builtKeyRef.current = buildKey
 
     let cancelled = false
+    const myPins = []
     ;(async () => {
       try {
         v.innerHTML = ''
@@ -169,6 +170,13 @@ export default function Reader({
           } else {
             const doc = await getPdfDoc(ps.id, getBuffer)
             if (cancelled) return
+            // Segura o documento enquanto ele estiver na tela: numa playlist
+            // são várias peças concatenadas e o LRU do cache poderia recolher
+            // uma delas no meio da leitura.
+            if (!cancelled) {
+              pinDoc(ps.id)
+              myPins.push(ps.id)
+            }
             const pFrom = ps.fromPage || 1
             const pTo = ps.toPage || doc.numPages
             let currentRow = null
@@ -255,6 +263,9 @@ export default function Reader({
       // dentro deles) depois de sair do leitor.
       ioRef.current?.disconnect()
       releaseIoRef.current?.disconnect()
+      // Devolve os documentos ao LRU: fora da tela eles são descartáveis.
+      for (const id of myPins) unpinDoc(id)
+      myPins.length = 0
     }
   }, [scoreId, scoreType, fitMode, getBuffer, isPlaylist, playlistScores])
 
