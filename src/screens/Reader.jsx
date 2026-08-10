@@ -228,21 +228,11 @@ export default function Reader({
         setCurrentPieceName(scoresToRender[0]?.name || scoreName)
         setAnnWrappers([...wrappersRef.current])
 
-        // Load annotations
-        if (isPlaylist) {
-          annotations.clearMap()
-          for (const range of scoreRangesRef.current) {
-            await annotations.loadAnnotationsWithOffset(range.scoreId, range.offset)
-          }
-        } else {
-          annotations.loadAnnotations(scoreId)
-        }
-
-        // Render first pages
-        renderPage(1)
-        renderPage(2)
-
-        // Scroll to the initially opened score
+        // Ir para a peça clicada vem primeiro e isolado de propósito. Abrir a
+        // peça errada é o tipo de falha que o músico percebe na hora, e antes
+        // ela dependia de tudo que vinha antes ter dado certo: qualquer erro
+        // aqui dentro caía no catch lá embaixo e a playlist abria na primeira
+        // peça, sem nenhum sinal de que algo falhou.
         if (isPlaylist && initialScrollTarget && initialScrollTarget > 1) {
           const target = wrappersRef.current[initialScrollTarget - 1]
           if (target) {
@@ -251,6 +241,25 @@ export default function Reader({
             })
           }
         }
+
+        // Load annotations
+        try {
+          if (isPlaylist) {
+            annotations.clearMap()
+            for (const range of scoreRangesRef.current) {
+              await annotations.loadAnnotationsWithOffset(range.scoreId, range.offset)
+            }
+          } else {
+            annotations.loadAnnotations(scoreId)
+          }
+        } catch (e) {
+          // Ficar sem anotação é ruim, mas não justifica derrubar a leitura.
+          console.error('loadAnnotations', e)
+        }
+
+        // Render first pages
+        renderPage(1)
+        renderPage(2)
       } catch (e) {
         console.error('buildViewer', e)
         builtKeyRef.current = null

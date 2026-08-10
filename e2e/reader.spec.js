@@ -166,6 +166,26 @@ test.describe('Reader — playlist', () => {
       .toBeLessThanOrEqual(MAX_CANVASES)
   })
 
+  test('abre na peça clicada, não na primeira da playlist', async ({ page }) => {
+    await seed(page, { scores, playlists })
+
+    await page.getByRole('button', { name: /abrir navegação|open navigation/i }).click()
+    await page.getByRole('button', { name: 'Ensaio', exact: true }).click()
+    // Entra pelo card da segunda peça, não pelo botão Tocar.
+    await page.getByText('Peca Dois', { exact: true }).first().click()
+    await expect(page.locator(VIEWER)).toBeVisible()
+    await expect.poll(() => countCanvases(page), { timeout: 15000 }).toBeGreaterThan(0)
+
+    // A posição tem de cair dentro da faixa da segunda peça. Comparar com os
+    // divisores em vez de um pixel fixo mantém o teste independente do
+    // tamanho exato da página.
+    await expect.poll(async () => page.locator(VIEWER).evaluate(v => {
+      const dividers = [...v.querySelectorAll('.piece-divider')]
+      const atual = dividers.filter(d => d.offsetTop <= v.scrollTop + 8).pop()
+      return atual ? atual.textContent.trim() : null
+    }), { timeout: 10000 }).toBe('Peca Dois')
+  })
+
   test('mantém o teto ao rolar por todas as peças', async ({ page }) => {
     await seed(page, { scores, playlists })
 
