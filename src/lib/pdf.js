@@ -23,10 +23,16 @@ function touch(id) {
   docCache.set(id, doc)
 }
 
-function evictIfNeeded() {
+// `keepId` protege o documento que está sendo entregue agora. Sem isso, quando
+// as entradas mais antigas estão todas pinadas — o caso de uma playlist longa,
+// em que cada peça já montada fica presa — o único candidato a descarte é
+// justamente o que acabou de ser carregado: ele era destruído e devolvido
+// morto, e o getPage seguinte estourava. Numa playlist isso derrubava a
+// montagem a partir da peça que passava do teto do cache.
+function evictIfNeeded(keepId) {
   for (const id of docCache.keys()) {
     if (docCache.size <= MAX_CACHED_DOCS) return
-    if (pinned.has(id)) continue
+    if (id === keepId || pinned.has(id)) continue
     const doc = docCache.get(id)
     docCache.delete(id)
     try { doc.destroy?.() } catch { /* já destruído */ }
@@ -42,14 +48,14 @@ export async function getPdfDoc(id, getBuffer) {
   if (!buf) throw new Error('pdf não encontrado')
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise
   docCache.set(id, doc)
-  evictIfNeeded()
+  evictIfNeeded(id)
   return doc
 }
 
 export function loadPdfFromBuffer(id, buf) {
   return pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise.then(doc => {
     docCache.set(id, doc)
-    evictIfNeeded()
+    evictIfNeeded(id)
     return doc
   })
 }

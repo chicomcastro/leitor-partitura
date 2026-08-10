@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
+import { useRef, useEffect, useLayoutEffect, useCallback, useState, useMemo } from 'react'
 import { idbGet } from '../lib/db'
 import { getPdfDoc } from '../lib/pdf'
 import { exportBackup, importBackup, exportPlaylist } from '../lib/backup'
@@ -14,6 +14,12 @@ import StatsView from '../components/StatsView'
 import Modal from '../components/Modal'
 import Onboarding from '../components/Onboarding'
 import s from './Library.module.css'
+
+// Fora do componente de propósito: a Library é desmontada toda vez que uma
+// partitura é aberta, então um ref interno não sobreviveria. Guardar a posição
+// por seção evita que voltar do leitor jogue o músico de volta ao topo de uma
+// estante longa.
+const scrollMemory = new Map()
 
 const VIEW_MODES = ['grid-sm', 'grid-md', 'grid-lg', 'list']
 const SORT_LABEL = { recent: 'library.sortRecent', added: 'library.sortAdded', name: 'library.sortName', pages: 'library.sortPages' }
@@ -252,6 +258,43 @@ export default function Library({
     return sorted.map(sc => ({ score: sc, pageRange: null, itemIndex: null }))
   }, [inPlaylist, activePl, allScores, query, section, favs, recents, selectedTags, sort])
 
+  const mainRef = useRef(null)
+  // `section` já vale 'stats' quando as estatísticas estão abertas, então ele
+  // sozinho identifica a vista — e evita depender de showStats, que é declarado
+  // mais abaixo.
+  const viewKey = inPlaylist ? 'pl:' + activePlaylist : section
+
+  // Congela as escritas a partir do clique que abre uma partitura. Durante a
+  // saída da Library ainda chegam eventos de rolagem, e eles vinham com zero —
+  // apagando justamente a posição que se quer guardar.
+  const frozenRef = useRef(false)
+
+  useLayoutEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+
+    frozenRef.current = false
+    const saved = scrollMemory.get(viewKey) || 0
+    if (saved) {
+      el.scrollTop = saved
+      // As miniaturas entram depois; até a grade ganhar altura final o scrollTop
+      // pedido pode ser truncado, então a posição é reaplicada no quadro seguinte.
+      requestAnimationFrame(() => { if (mainRef.current) mainRef.current.scrollTop = saved })
+    }
+
+    const onScroll = () => {
+      if (!frozenRef.current) scrollMemory.set(viewKey, el.scrollTop)
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [viewKey])
+
+  const rememberScroll = useCallback(() => {
+    const el = mainRef.current
+    if (el) scrollMemory.set(viewKey, el.scrollTop)
+    frozenRef.current = true
+  }, [viewKey])
+
   const handleBackup = useCallback(async () => {
     try {
       const blob = await exportBackup()
@@ -476,7 +519,7 @@ export default function Library({
           </div>
         </aside>
 
-        <main className={s.main} role="main">
+        <main className={s.main} role="main" ref={mainRef}>
           {showStats ? (
             <StatsView stats={stats} scores={allScores} playlists={playlists} recordingsMeta={recordingsMeta} goalMin={goalMin} setGoalMin={setGoalMin} t={t} />
           ) : (<>
@@ -559,7 +602,7 @@ export default function Library({
                       score={item.score}
                       inPlaylist={inPlaylist}
                       pageRange={item.pageRange}
-                      onOpen={(id) => onOpenScore(id, item.itemIndex)}
+                      onOpen={(id) => { rememberScroll(); onOpenScore(id, item.itemIndex) }}
                       onDelete={onDelete}
                       onAddOpen={(id) => setModal({ type: 'add', scoreId: id, totalPages: item.score.pages })}
                       onRemove={item.itemIndex != null ? () => onRemoveFromPlaylist(activePlaylist, item.itemIndex) : null}

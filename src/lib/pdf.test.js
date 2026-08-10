@@ -82,3 +82,26 @@ describe('cache de documentos do pdf.js', () => {
     expect(doc.destroyed).toBe(true)
   })
 })
+
+describe('cache não pode destruir o que acabou de carregar', () => {
+  it('devolve documento vivo mesmo com o cache cheio de pinados', async () => {
+    // Cenário da playlist grande: as peças já montadas ficam pinadas, então
+    // quando a próxima chega o único candidato a descarte é ela mesma.
+    for (let i = 0; i < 6; i++) {
+      await getPdfDoc('fix' + i, getBuffer)
+      pinDoc('fix' + i)
+    }
+
+    const nova = await getPdfDoc('setima', getBuffer)
+    expect(nova.destroyed).toBe(false)
+
+    // E segue no cache: pedir de novo não pode reparsear nem trazer outro
+    // objeto, senão as páginas já obtidas apontariam para um documento morto.
+    parses.length = 0
+    expect(await getPdfDoc('setima', getBuffer)).toBe(nova)
+    expect(parses).toEqual([])
+
+    for (let i = 0; i < 6; i++) { unpinDoc('fix' + i); evictDoc('fix' + i) }
+    evictDoc('setima')
+  })
+})
