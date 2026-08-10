@@ -193,3 +193,57 @@ test.describe('Reader — playlist', () => {
     await scrollThroughExpectingCap(page, 8)
   })
 })
+
+// Uma playlist pode repetir a mesma partitura: fatiar um songbook em músicas
+// por faixa de página é o caso real disso. Aí o id da partitura não distingue
+// as peças, e identificar o alvo só por ele levava o leitor a abrir na
+// ocorrência errada — a última vencia, porque cada match sobrescrevia o alvo.
+test.describe('Reader — playlist que repete a mesma partitura', () => {
+  const scores = [{ id: 'sb', name: 'Songbook', pages: 30 }]
+  const playlists = [{
+    id: 'pl1',
+    name: 'Repertorio',
+    color: '#E73B4C',
+    items: [
+      { scoreId: 'sb', fromPage: 1, toPage: 10 },
+      { scoreId: 'sb', fromPage: 11, toPage: 20 },
+      { scoreId: 'sb', fromPage: 21, toPage: 30 },
+    ],
+  }]
+
+  async function abrirItem(page, nth) {
+    await seed(page, { scores, playlists })
+    await page.getByRole('button', { name: /abrir navegação|open navigation/i }).click()
+    await page.getByRole('button', { name: 'Repertorio', exact: true }).click()
+    await page.getByText('Songbook', { exact: true }).nth(nth).click()
+    await expect(page.locator(VIEWER)).toBeVisible()
+    await expect.poll(() => countCanvases(page), { timeout: 15000 }).toBeGreaterThan(0)
+  }
+
+  // A tolerância cobre o respiro entre o divisor e a página logo abaixo dele:
+  // o leitor rola para `wrap.offsetTop - 16`, e no topo da lista o primeiro
+  // divisor fica alguns pixels abaixo de zero absoluto.
+  const pecaAtual = (page) => page.locator(VIEWER).evaluate(v => {
+    const dividers = [...v.querySelectorAll('.piece-divider')]
+    const atual = dividers.filter(d => d.offsetTop <= v.scrollTop + 32).pop()
+    return atual ? atual.textContent.trim() : null
+  })
+
+  test('abre na primeira fatia quando ela é a clicada', async ({ page }) => {
+    await abrirItem(page, 0)
+    await expect.poll(() => pecaAtual(page), { timeout: 10000 })
+      .toBe('Songbook (p. 1–10)')
+  })
+
+  test('abre na fatia do meio quando ela é a clicada', async ({ page }) => {
+    await abrirItem(page, 1)
+    await expect.poll(() => pecaAtual(page), { timeout: 10000 })
+      .toBe('Songbook (p. 11–20)')
+  })
+
+  test('abre na última fatia quando ela é a clicada', async ({ page }) => {
+    await abrirItem(page, 2)
+    await expect.poll(() => pecaAtual(page), { timeout: 10000 })
+      .toBe('Songbook (p. 21–30)')
+  })
+})
