@@ -247,3 +247,56 @@ test.describe('Reader — playlist que repete a mesma partitura', () => {
       .toBe('Songbook (p. 21–30)')
   })
 })
+
+// A "Métodos" do relato: 9 PDFs grandes, todos distintos, sem faixas de página.
+// Montar isso leva segundos, e é aí que o leitor era vulnerável — qualquer
+// render do App no meio do caminho cancelava a montagem, e a rolagem para a
+// peça clicada só acontecia depois de montar a playlist inteira.
+test.describe('Reader — playlist grande', () => {
+  // A "Métodos" do relato: vários PDFs grandes, todos distintos, sem faixas de
+  // página. A escala importa para o que se mede aqui — com poucas páginas a
+  // montagem termina rápido demais e o defeito não aparece.
+  const scores = Array.from({ length: 9 }, (_, n) => ({
+    id: 'm' + n, name: 'Metodo ' + n, pages: 120,
+  }))
+  const playlists = [{
+    id: 'pl1', name: 'Metodos', color: '#E9B949',
+    items: scores.map(s => ({ scoreId: s.id })),
+  }]
+
+  const pecaAtual = (page) => page.locator(VIEWER).evaluate(v => {
+    const dividers = [...v.querySelectorAll('.piece-divider')]
+    const atual = dividers.filter(d => d.offsetTop <= v.scrollTop + 32).pop()
+    return atual ? atual.textContent.trim() : null
+  })
+
+  async function abrir(page, nome) {
+    await seed(page, { scores, playlists })
+    await page.getByRole('button', { name: /abrir navegação|open navigation/i }).click()
+    await page.getByRole('button', { name: 'Metodos', exact: true }).click()
+    await page.getByText(nome, { exact: true }).first().click()
+    await expect(page.locator(VIEWER)).toBeVisible()
+  }
+
+  // Antes desta correção a rolagem só acontecia depois de montar a playlist
+  // inteira, e a montagem era cancelada por qualquer render do App no meio do
+  // caminho. Nesta escala o resultado medido era "nunca chega": o leitor ficava
+  // parado na primeira peça indefinidamente.
+  test('chega na peça clicada apesar da montagem demorada', async ({ page }) => {
+    await abrir(page, 'Metodo 3')
+    await expect.poll(() => pecaAtual(page), { timeout: 30000 }).toBe('Metodo 3')
+  })
+
+  test('não perde o alvo se o App renderizar durante a montagem', async ({ page }) => {
+    await abrir(page, 'Metodo 4')
+
+    // O registro de tempo de estudo provoca renders do App sozinho. Aqui a
+    // mesma pressão é aplicada de fora, durante a janela de montagem.
+    for (let i = 0; i < 12; i++) {
+      await page.evaluate(() => window.dispatchEvent(new Event('resize')))
+      await page.waitForTimeout(120)
+    }
+
+    await expect.poll(() => pecaAtual(page), { timeout: 30000 }).toBe('Metodo 4')
+  })
+})
