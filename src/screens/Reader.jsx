@@ -173,6 +173,12 @@ export default function Reader({
           const resolvedType = ps.type || 'pdf'
           const offset = globalPage
 
+          // Cada peça é isolada: um PDF que o pdf.js não consegue abrir custa
+          // aquela peça, não a playlist inteira. Antes um erro em qualquer peça
+          // abortava a montagem, e as peças seguintes — inclusive a que o
+          // músico clicou — simplesmente não existiam.
+          try {
+
           if (isPlaylist) {
             const divider = document.createElement('div')
             divider.className = 'piece-divider'
@@ -270,6 +276,11 @@ export default function Reader({
             scoreRangesRef.current.push({ scoreId: ps.id, offset, count: pTo - pFrom + 1, name: ps.name })
             if (isTargetPiece(si, ps.id)) initialScrollTarget = offset + 1
           }
+
+          } catch (e) {
+            console.error('buildViewer: peça', ps.id, e)
+          }
+
           goToTarget()
         }
 

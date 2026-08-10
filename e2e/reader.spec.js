@@ -300,3 +300,38 @@ test.describe('Reader — playlist grande', () => {
     await expect.poll(() => pecaAtual(page), { timeout: 30000 }).toBe('Metodo 4')
   })
 })
+
+// O cache de documentos do pdf.js tem teto de 6. Numa playlist com mais peças
+// que isso, as já montadas ficam pinadas e o único candidato a descarte passa a
+// ser o documento recém-carregado — que era destruído e devolvido morto, e o
+// getPage seguinte estourava. A montagem morria a partir dessa peça, então
+// clicar numa das últimas caía na primeira.
+//
+// Aqui os arquivos são leves de propósito: o que se exercita é a QUANTIDADE de
+// documentos, não o tamanho de cada um.
+test.describe('Reader — playlist com mais peças que o cache', () => {
+  const scores = Array.from({ length: 9 }, (_, n) => ({
+    id: 'c' + n, name: 'Curta ' + n, pages: 4,
+  }))
+  const playlists = [{
+    id: 'pl1', name: 'Nove', color: '#3B82F6',
+    items: scores.map(s => ({ scoreId: s.id })),
+  }]
+
+  const pecaAtual = (page) => page.locator(VIEWER).evaluate(v => {
+    const dividers = [...v.querySelectorAll('.piece-divider')]
+    const atual = dividers.filter(d => d.offsetTop <= v.scrollTop + 32).pop()
+    return atual ? atual.textContent.trim() : null
+  })
+
+  for (const alvo of ['Curta 6', 'Curta 8']) {
+    test(`abre em "${alvo}", além do teto do cache`, async ({ page }) => {
+      await seed(page, { scores, playlists })
+      await page.getByRole('button', { name: /abrir navegação|open navigation/i }).click()
+      await page.getByRole('button', { name: 'Nove', exact: true }).click()
+      await page.getByText(alvo, { exact: true }).first().click()
+      await expect(page.locator(VIEWER)).toBeVisible()
+      await expect.poll(() => pecaAtual(page), { timeout: 30000 }).toBe(alvo)
+    })
+  }
+})
