@@ -17,6 +17,7 @@ export default function App() {
   const [landingSeen, setLandingSeen] = useState(() => localStorage.getItem('sp.landing') === '1')
   const [view, setView] = useState('library')
   const [currentScoreId, setCurrentScoreId] = useState(null)
+  const [currentItemIndex, setCurrentItemIndex] = useState(null)
   const [activePlaylist, setActivePlaylist] = useState(null)
 
   const [scores, setScores] = usePersistedState('sp.scores', [])
@@ -87,11 +88,16 @@ export default function App() {
     }
   }, [])
 
-  const openScore = useCallback((id) => {
+  // itemIndex identifica a posição clicada dentro da playlist. Casar só pelo id
+  // é ambíguo: uma playlist pode repetir a mesma partitura — um songbook
+  // fatiado por faixas de página é exatamente isso — e aí o id não diz em qual
+  // das ocorrências o músico tocou.
+  const openScore = useCallback((id, itemIndex = null) => {
     setScores(prev => prev.map(s => s.id === id ? { ...s, lastOpenedAt: Date.now() } : s))
     setStats(prev => registerView(prev, id))
     navigate(() => {
       setCurrentScoreId(id)
+      setCurrentItemIndex(itemIndex)
       setView('reader')
     })
   }, [setScores, setStats, navigate])
@@ -229,6 +235,7 @@ export default function App() {
         recordingsMeta={recordingsMeta}
         setRecordingsMeta={setRecordingsMeta}
         playlistScores={playlistScores}
+        playlistIndex={currentItemIndex}
         playlists={playlists}
         onAddToPlaylist={addToPlaylist}
         onCreatePlaylist={createPlaylist}

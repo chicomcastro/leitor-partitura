@@ -18,7 +18,7 @@ export default function Reader({
   scrollSpeed, setScrollSpeed, bpm, setBpm, beats, setBeats,
   gestures, setGestures, markers, setMarkers,
   anchors, setAnchors,
-  recordingsMeta, setRecordingsMeta, playlistScores,
+  recordingsMeta, setRecordingsMeta, playlistScores, playlistIndex,
   playlists, onAddToPlaylist, onCreatePlaylist, onRecordPractice,
 }) {
   const { t } = useI18n()
@@ -122,6 +122,16 @@ export default function Reader({
         let globalPage = 0
         let initialScrollTarget = null
 
+        // Qual peça da playlist foi clicada. O índice é a resposta exata; o id
+        // só entra como reserva (playlist aberta pelo botão Tocar, ou estado
+        // antigo sem índice). Casar apenas por id é ambíguo quando a playlist
+        // repete a mesma partitura — um songbook fatiado por faixas de página é
+        // exatamente isso —, e aí a última ocorrência vencia e o leitor abria
+        // numa peça que não era a tocada.
+        const hasIndex = isPlaylist && Number.isInteger(playlistIndex)
+          && playlistIndex >= 0 && playlistIndex < scoresToRender.length
+        const isTargetPiece = (si, id) => hasIndex ? si === playlistIndex : id === scoreId
+
         for (let si = 0; si < scoresToRender.length; si++) {
           const ps = scoresToRender[si]
           if (cancelled) return
@@ -146,9 +156,13 @@ export default function Reader({
           }
 
           if (resolvedType === 'image') {
-            globalPage++
             const buf = await getBuffer(ps.id)
-            if (cancelled || !buf) continue
+            if (cancelled) return
+            // Só numera depois de saber que a página existe: incrementar antes
+            // do continue abria um buraco na contagem, e todas as páginas
+            // seguintes ficavam com número maior que sua posição real.
+            if (!buf) continue
+            globalPage++
             const url = URL.createObjectURL(new Blob([buf]))
             const wrap = document.createElement('div')
             wrap.dataset.page = globalPage
@@ -166,7 +180,7 @@ export default function Reader({
             const imgPage = globalPage
             img.addEventListener('load', () => renderPage(imgPage), { once: true })
             scoreRangesRef.current.push({ scoreId: ps.id, offset, count: 1, name: ps.name })
-            if (ps.id === scoreId) initialScrollTarget = globalPage
+            if (isTargetPiece(si, ps.id)) initialScrollTarget = globalPage
           } else {
             const doc = await getPdfDoc(ps.id, getBuffer)
             if (cancelled) return
@@ -219,7 +233,7 @@ export default function Reader({
               wrappersRef.current.push({ i: globalPage, wrap, page, scale })
             }
             scoreRangesRef.current.push({ scoreId: ps.id, offset, count: pTo - pFrom + 1, name: ps.name })
-            if (ps.id === scoreId) initialScrollTarget = offset + 1
+            if (isTargetPiece(si, ps.id)) initialScrollTarget = offset + 1
           }
         }
 
@@ -234,7 +248,9 @@ export default function Reader({
         // aqui dentro caía no catch lá embaixo e a playlist abria na primeira
         // peça, sem nenhum sinal de que algo falhou.
         if (isPlaylist && initialScrollTarget && initialScrollTarget > 1) {
-          const target = wrappersRef.current[initialScrollTarget - 1]
+          // Busca pelo número da página, não pela posição no array: uma peça
+          // que não renderiza nenhuma página deixaria os dois fora de sincronia.
+          const target = wrappersRef.current.find(o => o.i === initialScrollTarget)
           if (target) {
             requestAnimationFrame(() => {
               v.scrollTo({ top: target.wrap.offsetTop - 16, behavior: 'instant' })

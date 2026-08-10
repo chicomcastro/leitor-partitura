@@ -77,7 +77,29 @@ describe('Library actions', () => {
   it('opens a score when its card is clicked', () => {
     const props = renderLibrary()
     fireEvent.click(screen.getByText('Clair de Lune'))
-    expect(props.onOpenScore).toHaveBeenCalledWith('1')
+    // Fora de uma playlist não há posição a informar.
+    expect(props.onOpenScore).toHaveBeenCalledWith('1', null)
+  })
+
+  it('informa a posição do item ao abrir de dentro de uma playlist', () => {
+    // Uma playlist pode repetir a mesma partitura — um songbook fatiado por
+    // faixas de página faz isso —, então o id não basta para dizer em qual
+    // ocorrência o músico tocou: a posição é o que desambigua.
+    const props = renderLibrary({
+      activePlaylist: 'pl1',
+      playlists: [{
+        id: 'pl1',
+        name: 'Repertorio',
+        color: '#E73B4C',
+        items: [
+          { scoreId: '1', fromPage: 1, toPage: 1 },
+          { scoreId: '1', fromPage: 1, toPage: 1 },
+        ],
+      }],
+    })
+
+    fireEvent.click(screen.getAllByText('Clair de Lune')[1])
+    expect(props.onOpenScore).toHaveBeenCalledWith('1', 1)
   })
 
   it('creates a playlist through the new-playlist modal', () => {

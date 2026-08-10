@@ -559,7 +559,7 @@ export default function Library({
                       score={item.score}
                       inPlaylist={inPlaylist}
                       pageRange={item.pageRange}
-                      onOpen={onOpenScore}
+                      onOpen={(id) => onOpenScore(id, item.itemIndex)}
                       onDelete={onDelete}
                       onAddOpen={(id) => setModal({ type: 'add', scoreId: id, totalPages: item.score.pages })}
                       onRemove={item.itemIndex != null ? () => onRemoveFromPlaylist(activePlaylist, item.itemIndex) : null}
