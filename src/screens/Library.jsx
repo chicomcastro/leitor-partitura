@@ -265,18 +265,27 @@ export default function Library({
   const viewKey = inPlaylist ? 'pl:' + activePlaylist : section
 
   // Congela as escritas a partir do clique que abre uma partitura. Durante a
-  // saída da Library ainda chegam eventos de rolagem, e eles vinham com zero —
+  // saída da Library ainda chegam eventos de rolagem, e eles vêm com zero —
   // apagando justamente a posição que se quer guardar.
   const frozenRef = useRef(false)
+  const montouRef = useRef(false)
 
   useLayoutEffect(() => {
     const el = mainRef.current
     if (!el) return
 
     frozenRef.current = false
-    const saved = scrollMemory.get(viewKey) || 0
+
+    // A posição só é recuperada quando a Library volta a existir — isto é, no
+    // retorno do leitor. Trocar de seção mostra outra listagem, e aí o certo é
+    // começar do topo; sem zerar explicitamente, o navegador manteria a rolagem
+    // da listagem anterior, que não diz nada sobre a nova.
+    const voltandoDoLeitor = !montouRef.current
+    montouRef.current = true
+    const saved = voltandoDoLeitor ? (scrollMemory.get(viewKey) || 0) : 0
+
+    el.scrollTop = saved
     if (saved) {
-      el.scrollTop = saved
       // As miniaturas entram depois; até a grade ganhar altura final o scrollTop
       // pedido pode ser truncado, então a posição é reaplicada no quadro seguinte.
       requestAnimationFrame(() => { if (mainRef.current) mainRef.current.scrollTop = saved })

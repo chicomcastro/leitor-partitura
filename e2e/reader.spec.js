@@ -335,3 +335,60 @@ test.describe('Reader — playlist com mais peças que o cache', () => {
     })
   }
 })
+
+// Abrir uma peça do meio e virar a página tem de avançar DENTRO dela. A página
+// corrente ficava presa em 1 depois da rolagem inicial, então o primeiro toque
+// para virar levava o músico de volta à página 2 da primeira peça da playlist.
+// Abrir uma peça do meio e virar a página tem de avançar DENTRO dela. A página
+// corrente ficava presa em 1 depois da rolagem inicial, e o primeiro toque
+// levava o músico de volta à página 2 da PRIMEIRA peça da playlist.
+//
+// Limite honesto: é uma corrida entre a montagem, que escrevia 1, e o
+// rastreador de rolagem, que corrige o valor. Numa máquina rápida a correção
+// chega a tempo e o teste passa mesmo sem a correção — ele vale como asserção
+// de comportamento, não como guarda contra esta regressão. O que a correção faz
+// é eliminar a corrida: a montagem nunca mais escreve 1 havendo peça alvo.
+test.describe('Reader — virar página a partir da peça aberta', () => {
+  const scores = [
+    { id: 'v1', name: 'Vira Um', pages: 10 },
+    { id: 'v2', name: 'Vira Dois', pages: 10 },
+    { id: 'v3', name: 'Vira Tres', pages: 10 },
+  ]
+  const playlists = [{
+    id: 'pl1', name: 'Viradas', color: '#E73B4C',
+    items: scores.map(x => ({ scoreId: x.id })),
+  }]
+
+  const pecaAtual = (page) => page.locator(VIEWER).evaluate(v => {
+    const dividers = [...v.querySelectorAll('.piece-divider')]
+    const atual = dividers.filter(d => d.offsetTop <= v.scrollTop + 32).pop()
+    return atual ? atual.textContent.trim() : null
+  })
+
+  test('avança dentro da peça, sem voltar para a primeira', async ({ page }) => {
+    await seed(page, { scores, playlists })
+    await page.getByRole('button', { name: /abrir navegação|open navigation/i }).click()
+    await page.getByRole('button', { name: 'Viradas', exact: true }).click()
+    await page.getByText('Vira Dois', { exact: true }).first().click()
+
+    await expect(page.locator(VIEWER)).toBeVisible()
+    await expect.poll(() => pecaAtual(page), { timeout: 20000 }).toBe('Vira Dois')
+
+    // A segunda peça começa na página 11 das 30 concatenadas. O indicador é a
+    // leitura direta do que estava quebrado: ele ficava em 1, e por isso virar
+    // a página levava para a página 2 da PRIMEIRA peça.
+    const indicador = page.getByText(/Página \d+ de \d+|Page \d+ of \d+/)
+    await expect(indicador).toHaveText(/11/)
+
+    // Pequena espera antes do toque: logo após a rolagem inicial o leitor ainda
+    // está assentando, e um toque nesse instante se perde. Um músico toca a tela
+    // depois de ver a página, não durante o salto.
+    await page.waitForTimeout(1500)
+
+    const box = await page.locator(VIEWER).boundingBox()
+    await page.mouse.click(box.x + box.width * 0.85, box.y + box.height * 0.5)
+
+    await expect(indicador).toHaveText(/12/, { timeout: 10000 })
+    expect(await pecaAtual(page)).toBe('Vira Dois')
+  })
+})
