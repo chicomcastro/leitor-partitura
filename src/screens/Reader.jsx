@@ -138,6 +138,7 @@ export default function Reader({
         const scoresToRender = isPlaylist ? playlistScores : [{ id: scoreId, type: scoreType || 'pdf', name: scoreName }]
         let globalPage = 0
         let initialScrollTarget = null
+        let initialPieceName = null
 
         // Qual peça da playlist foi clicada. O índice é a resposta exata; o id
         // só entra como reserva (playlist aberta pelo botão Tocar, ou estado
@@ -162,6 +163,11 @@ export default function Reader({
           const target = wrappersRef.current.find(o => o.i === initialScrollTarget)
           if (!target) return
           scrolled = true
+          // A página corrente acompanha a rolagem. Sem isto ela continuava em 1,
+          // e o primeiro toque para virar página levava o músico de volta à
+          // página 2 da PRIMEIRA peça da playlist.
+          setCurrentPage(initialScrollTarget)
+          if (initialPieceName) setCurrentPieceName(initialPieceName)
           requestAnimationFrame(() => {
             v.scrollTo({ top: target.wrap.offsetTop - 16, behavior: 'instant' })
           })
@@ -221,7 +227,7 @@ export default function Reader({
             const imgPage = globalPage
             img.addEventListener('load', () => renderPage(imgPage), { once: true })
             scoreRangesRef.current.push({ scoreId: ps.id, offset, count: 1, name: ps.name })
-            if (isTargetPiece(si, ps.id)) initialScrollTarget = globalPage
+            if (isTargetPiece(si, ps.id)) { initialScrollTarget = globalPage; initialPieceName = ps.name }
           } else {
             const doc = await getPdfDoc(ps.id, getBuffer)
             if (cancelled) return
@@ -274,7 +280,7 @@ export default function Reader({
               wrappersRef.current.push({ i: globalPage, wrap, page, scale })
             }
             scoreRangesRef.current.push({ scoreId: ps.id, offset, count: pTo - pFrom + 1, name: ps.name })
-            if (isTargetPiece(si, ps.id)) initialScrollTarget = offset + 1
+            if (isTargetPiece(si, ps.id)) { initialScrollTarget = offset + 1; initialPieceName = ps.name }
           }
 
           } catch (e) {
@@ -285,8 +291,8 @@ export default function Reader({
         }
 
         setTotalPages(globalPage)
-        setCurrentPage(1)
-        setCurrentPieceName(scoresToRender[0]?.name || scoreName)
+        setCurrentPage(initialScrollTarget || 1)
+        setCurrentPieceName(initialPieceName || scoresToRender[0]?.name || scoreName)
         setAnnWrappers([...wrappersRef.current])
 
         // Rede de segurança: se por algum motivo não rolou durante a montagem.

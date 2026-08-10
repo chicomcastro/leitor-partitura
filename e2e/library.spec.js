@@ -59,21 +59,22 @@ test.describe('Library — posição de rolagem', () => {
       .toBeGreaterThan(antes - 80)
   })
 
-  test('cada seção lembra a sua própria posição', async ({ page }) => {
+  test('trocar de seção começa do topo', async ({ page }) => {
     await seedMuitasPartituras(page, 30)
 
     await page.locator(MAIN).evaluate(el => { el.scrollTop = 600 })
     await page.waitForTimeout(400)
 
-    // Recentes está vazia aqui: trocar de seção não pode carregar a posição da
-    // anterior, senão a nova vista abre rolada sem motivo.
+    // Outra listagem é outro conteúdo: a rolagem anterior não diz nada sobre
+    // ela, então a vista abre no topo.
     await page.getByRole('button', { name: /abrir navegação|open navigation/i }).click()
     await page.getByRole('button', { name: /recentes|recent/i }).click()
     await expect.poll(() => scrollTop(page), { timeout: 10000 }).toBe(0)
 
-    // E voltar para "todas" recupera a posição de lá.
+    // E voltar para "todas" também começa do topo — a memória é só para a
+    // ida e volta ao leitor.
     await page.getByRole('button', { name: /abrir navegação|open navigation/i }).click()
     await page.getByRole('button', { name: /todas as partituras|all scores/i }).click()
-    await expect.poll(() => scrollTop(page), { timeout: 10000 }).toBeGreaterThan(300)
+    await expect.poll(() => scrollTop(page), { timeout: 10000 }).toBe(0)
   })
 })
