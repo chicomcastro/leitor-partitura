@@ -46,6 +46,9 @@ function ScoreCard({ score, inPlaylist, pageRange, onOpen, onDelete, onAddOpen, 
         canvas.width = vp.width
         canvas.height = vp.height
         await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise
+        // A miniatura já está desenhada; a lista de operadores da página não
+        // serve mais para nada e numa coleção grande são muitas páginas 1.
+        try { page.cleanup() } catch { /* render concorrente */ }
         setLoaded(true)
       })
       .catch(() => { drawnRef.current = null })

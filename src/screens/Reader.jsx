@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { idbGet } from '../lib/db'
-import { getPdfDoc } from '../lib/pdf'
+import { getPdfDoc, pinDoc, unpinDoc } from '../lib/pdf'
 import { useI18n } from '../lib/i18n'
 import { useMetronome } from '../hooks/useMetronome'
 import { useRecorder } from '../hooks/useRecorder'
@@ -25,6 +25,7 @@ export default function Reader({
   const viewerRef = useRef(null)
   const wrappersRef = useRef([])
   const ioRef = useRef(null)
+  const releaseIoRef = useRef(null)
   const builtKeyRef = useRef(null)
   const jumpStackRef = useRef([])
   const rafRef = useRef(null)
@@ -56,7 +57,7 @@ export default function Reader({
 
   const metro = useMetronome({ bpm, beats, accent })
   const annotations = useAnnotations()
-  const { setErasing } = useAnnotationLayer({
+  const { setErasing, ensurePage, releasePage } = useAnnotationLayer({
     wrappers: annWrappers,
     scoreId,
     annotating,
@@ -92,16 +93,26 @@ export default function Reader({
     builtKeyRef.current = buildKey
 
     let cancelled = false
+    const myPins = []
     ;(async () => {
       try {
         v.innerHTML = ''
         wrappersRef.current = []
         scoreRangesRef.current = []
         if (ioRef.current) ioRef.current.disconnect()
+        if (releaseIoRef.current) releaseIoRef.current.disconnect()
 
         ioRef.current = new IntersectionObserver((entries) => {
           entries.forEach(en => { if (en.isIntersecting) renderPage(+en.target.dataset.page) })
         }, { root: v, rootMargin: '300px 0px' })
+
+        // Segundo observador, com margem bem maior que o de render: páginas que
+        // saem desta faixa devolvem seus canvases. Sem isso cada página visitada
+        // deixa para trás dois canvases em resolução cheia e a aba acaba morta
+        // por falta de memória numa partitura longa.
+        releaseIoRef.current = new IntersectionObserver((entries) => {
+          entries.forEach(en => { if (!en.isIntersecting) releaseRenderedPage(+en.target.dataset.page) })
+        }, { root: v, rootMargin: '1500px 0px' })
 
         const cw = v.clientWidth - 24
         const ch = v.clientHeight - 32
@@ -148,11 +159,24 @@ export default function Reader({
             wrap.appendChild(img)
             v.appendChild(wrap)
             wrappersRef.current.push({ i: globalPage, wrap, page: null, scale: 1 })
+            ioRef.current.observe(wrap)
+            releaseIoRef.current.observe(wrap)
+            // O wrapper de imagem só ganha altura quando o <img> carrega, e a
+            // camada de anotação precisa dessa altura para dimensionar o canvas.
+            const imgPage = globalPage
+            img.addEventListener('load', () => renderPage(imgPage), { once: true })
             scoreRangesRef.current.push({ scoreId: ps.id, offset, count: 1, name: ps.name })
             if (ps.id === scoreId) initialScrollTarget = globalPage
           } else {
             const doc = await getPdfDoc(ps.id, getBuffer)
             if (cancelled) return
+            // Segura o documento enquanto ele estiver na tela: numa playlist
+            // são várias peças concatenadas e o LRU do cache poderia recolher
+            // uma delas no meio da leitura.
+            if (!cancelled) {
+              pinDoc(ps.id)
+              myPins.push(ps.id)
+            }
             const pFrom = ps.fromPage || 1
             const pTo = ps.toPage || doc.numPages
             let currentRow = null
@@ -184,10 +208,12 @@ export default function Reader({
                 }
                 currentRow.appendChild(wrap)
                 ioRef.current.observe(wrap)
+                releaseIoRef.current.observe(wrap)
               } else {
                 wrap.style.margin = '0 auto 16px auto'
                 v.appendChild(wrap)
                 ioRef.current.observe(wrap)
+                releaseIoRef.current.observe(wrap)
               }
 
               wrappersRef.current.push({ i: globalPage, wrap, page, scale })
@@ -231,12 +257,23 @@ export default function Reader({
       }
     })()
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      // Sem isso os observadores seguem segurando os wrappers (e os canvases
+      // dentro deles) depois de sair do leitor.
+      ioRef.current?.disconnect()
+      releaseIoRef.current?.disconnect()
+      // Devolve os documentos ao LRU: fora da tela eles são descartáveis.
+      for (const id of myPins) unpinDoc(id)
+      myPins.length = 0
+    }
   }, [scoreId, scoreType, fitMode, getBuffer, isPlaylist, playlistScores])
 
   function renderPage(i) {
     const obj = wrappersRef.current[i - 1]
-    if (!obj || obj.wrap.dataset.rendered || !obj.page) return
+    if (!obj) return
+    ensurePage(i)
+    if (obj.wrap.dataset.rendered || !obj.page) return
     obj.wrap.dataset.rendered = '1'
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const vp = obj.page.getViewport({ scale: obj.scale * dpr })
@@ -244,9 +281,37 @@ export default function Reader({
     canvas.width = vp.width
     canvas.height = vp.height
     canvas.style.cssText = 'width:100%;height:100%;display:block;'
+    canvas.dataset.pdfCanvas = '1'
     obj.wrap.appendChild(canvas)
-    obj.page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise
-      .catch(() => { obj.wrap.dataset.rendered = '' })
+    const task = obj.page.render({ canvasContext: canvas.getContext('2d'), viewport: vp })
+    obj.task = task
+    task.promise
+      .then(() => { obj.task = null })
+      .catch(() => { obj.task = null; obj.wrap.dataset.rendered = '' })
+  }
+
+  // Devolve a memória de uma página que saiu da faixa de retenção: o canvas do
+  // PDF, o canvas de anotação e os recursos que o pdf.js guarda para a página.
+  // Tudo é reconstruído quando ela voltar a se aproximar da viewport.
+  function releaseRenderedPage(i) {
+    const obj = wrappersRef.current[i - 1]
+    if (!obj) return
+    releasePage(i)
+    if (!obj.wrap.dataset.rendered) return
+    if (obj.task) {
+      obj.task.cancel()
+      obj.task = null
+    }
+    const canvas = obj.wrap.querySelector('canvas[data-pdf-canvas]')
+    if (canvas) {
+      canvas.width = 0
+      canvas.height = 0
+      canvas.remove()
+    }
+    obj.wrap.dataset.rendered = ''
+    // cleanup() libera a lista de operadores da página; se um render ainda
+    // estiver em voo o pdf.js reclama, daí o guard acima e o catch.
+    try { obj.page?.cleanup() } catch { /* render em andamento */ }
   }
 
   // scroll tracking
