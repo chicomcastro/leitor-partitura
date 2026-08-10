@@ -925,7 +925,13 @@
   min-height: 42px;
 }
 
-.plRow:hover { background: var(--surface-hover); }
+/* Estilos de hover só onde existe um ponteiro que paira de verdade.
+   Num tablet, uma regra :hover que revela conteúdo faz o Safari do iOS gastar
+   o primeiro toque aplicando o hover em vez de disparar o clique — o item
+   acende e nada acontece, e só o segundo toque navega. */
+@media (hover: hover) {
+  .plRow:hover { background: var(--surface-hover); }
+}
 
 .plRowActive { background: var(--surface-hover); box-shadow: inset 2px 0 0 var(--accent); }
 
@@ -968,8 +974,17 @@
   flex: none;
 }
 
-.plRow:hover .plEditBtn, .plRowActive .plEditBtn { display: flex; }
-.plEditBtn:hover { color: var(--text-white); background: var(--border-light); }
+.plRowActive .plEditBtn { display: flex; }
+
+@media (hover: hover) {
+  .plRow:hover .plEditBtn { display: flex; }
+  .plEditBtn:hover { color: var(--text-white); background: var(--border-light); }
+}
+
+/* Sem hover não há como revelar nada: o botão fica sempre visível. */
+@media (hover: none) {
+  .plEditBtn { display: flex; }
+}
 
 /* drag-to-reorder grips + feedback */
 .plGrip {
@@ -1205,7 +1220,6 @@
   .sidebarOpen { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,.5); }
   .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 55; }
   .hamburger { display: flex; order: -1; }
-  .plEditBtn { display: flex; }
 }
 
 @media (max-width: 600px) {
