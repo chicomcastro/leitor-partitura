@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { flushSync } from 'react-dom'
 import { usePersistedState } from './hooks/usePersistedState'
 import { idbPut, idbDel } from './lib/db'
@@ -199,17 +199,25 @@ export default function App() {
     }))
   }, [setPlaylists])
 
+  // Memoizado porque a identidade deste array é dependência do efeito que monta
+  // o leitor. Recriá-lo a cada render do App — e o registro de tempo de estudo
+  // provoca renders sozinho — cancelava a montagem em andamento no meio do
+  // caminho. Numa playlist de arquivos grandes a montagem demora, então a
+  // chance de ser interrompida era alta e o leitor ficava na primeira peça.
+  const playlistScores = useMemo(() => {
+    const pl = playlists.find(p => p.id === activePlaylist)
+    if (!pl) return null
+    return pl.items.map(item => {
+      const score = scores.find(s => s.id === item.scoreId)
+      if (!score) return null
+      return { ...score, fromPage: item.fromPage, toPage: item.toPage }
+    }).filter(Boolean)
+  }, [playlists, activePlaylist, scores])
+
   const currentScore = scores.find(s => s.id === currentScoreId)
 
   if (view === 'reader' && currentScoreId) {
     const pl = playlists.find(p => p.id === activePlaylist)
-    const playlistScores = pl
-      ? pl.items.map(item => {
-          const score = scores.find(s => s.id === item.scoreId)
-          if (!score) return null
-          return { ...score, fromPage: item.fromPage, toPage: item.toPage }
-        }).filter(Boolean)
-      : null
     const markersKey = pl ? `pl_${pl.id}` : currentScoreId
 
     return (

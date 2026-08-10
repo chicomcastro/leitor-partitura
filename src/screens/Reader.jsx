@@ -26,7 +26,6 @@ export default function Reader({
   const wrappersRef = useRef([])
   const ioRef = useRef(null)
   const releaseIoRef = useRef(null)
-  const builtKeyRef = useRef(null)
   const jumpStackRef = useRef([])
   const rafRef = useRef(null)
   const lastTsRef = useRef(null)
@@ -54,6 +53,11 @@ export default function Reader({
   const [erasing, setErasingState] = useState(false)
   const [annWrappers, setAnnWrappers] = useState([])
   const [turnFlash, setTurnFlash] = useState(0)
+  // Remontar após girar o tablet: as páginas são dimensionadas na montagem, e a
+  // largura nova muda a escala. Antes isso vinha de um efeito colateral — zerar
+  // a chave de montagem e torcer para um render acontecer —, que dependia de o
+  // efeito rodar a cada render. Agora é explícito.
+  const [resizeNonce, setResizeNonce] = useState(0)
 
   const metro = useMetronome({ bpm, beats, accent })
   const annotations = useAnnotations()
@@ -81,16 +85,29 @@ export default function Reader({
 
   const isPlaylist = playlistScores && playlistScores.length > 0
 
+  // A montagem do leitor é longa numa playlist de arquivos grandes, e roda em
+  // await. Se o efeito depender de valores recriados a cada render do App, um
+  // render qualquer no meio do caminho cancela a montagem pela metade. Por isso
+  // a dependência é só esta chave, e o resto entra por ref.
+  const buildKey = isPlaylist
+    ? 'pl|' + playlistScores.map(ps => ps.id).join(',') + '|' + fitMode + '|' + playlistIndex + '|' + resizeNonce
+    : scoreId + '|' + fitMode + '|' + (scoreType || 'pdf') + '|' + resizeNonce
+
+  const buildInputRef = useRef(null)
+  buildInputRef.current = {
+    playlistScores, playlistIndex, scoreId, scoreType, scoreName,
+    fitMode, isPlaylist, getBuffer, annotations,
+  }
+
   // build viewer
   useEffect(() => {
     const v = viewerRef.current
     if (!v) return
 
-    const buildKey = isPlaylist
-      ? 'pl|' + playlistScores.map(ps => ps.id).join(',') + '|' + fitMode
-      : scoreId + '|' + fitMode + '|' + (scoreType || 'pdf')
-    if (builtKeyRef.current === buildKey) return
-    builtKeyRef.current = buildKey
+    const {
+      playlistScores, playlistIndex, scoreId, scoreType, scoreName,
+      fitMode, isPlaylist, getBuffer, annotations,
+    } = buildInputRef.current
 
     let cancelled = false
     const myPins = []
@@ -131,6 +148,24 @@ export default function Reader({
         const hasIndex = isPlaylist && Number.isInteger(playlistIndex)
           && playlistIndex >= 0 && playlistIndex < scoresToRender.length
         const isTargetPiece = (si, id) => hasIndex ? si === playlistIndex : id === scoreId
+
+        // Rola assim que a peça alvo termina de ser montada, sem esperar as
+        // peças seguintes. Esperar a playlist inteira significava, com arquivos
+        // grandes, o músico ficar lendo a primeira peça por vários segundos até
+        // o leitor pular sozinho para a certa. As peças que vêm depois são
+        // acrescentadas abaixo, então esta posição não se desloca.
+        let scrolled = false
+        const goToTarget = () => {
+          if (scrolled || !initialScrollTarget || initialScrollTarget <= 1) return
+          // Busca pelo número da página, não pela posição no array: uma peça
+          // que não renderiza nenhuma página deixaria os dois fora de sincronia.
+          const target = wrappersRef.current.find(o => o.i === initialScrollTarget)
+          if (!target) return
+          scrolled = true
+          requestAnimationFrame(() => {
+            v.scrollTo({ top: target.wrap.offsetTop - 16, behavior: 'instant' })
+          })
+        }
 
         for (let si = 0; si < scoresToRender.length; si++) {
           const ps = scoresToRender[si]
@@ -235,6 +270,7 @@ export default function Reader({
             scoreRangesRef.current.push({ scoreId: ps.id, offset, count: pTo - pFrom + 1, name: ps.name })
             if (isTargetPiece(si, ps.id)) initialScrollTarget = offset + 1
           }
+          goToTarget()
         }
 
         setTotalPages(globalPage)
@@ -242,21 +278,11 @@ export default function Reader({
         setCurrentPieceName(scoresToRender[0]?.name || scoreName)
         setAnnWrappers([...wrappersRef.current])
 
-        // Ir para a peça clicada vem primeiro e isolado de propósito. Abrir a
-        // peça errada é o tipo de falha que o músico percebe na hora, e antes
-        // ela dependia de tudo que vinha antes ter dado certo: qualquer erro
-        // aqui dentro caía no catch lá embaixo e a playlist abria na primeira
-        // peça, sem nenhum sinal de que algo falhou.
-        if (isPlaylist && initialScrollTarget && initialScrollTarget > 1) {
-          // Busca pelo número da página, não pela posição no array: uma peça
-          // que não renderiza nenhuma página deixaria os dois fora de sincronia.
-          const target = wrappersRef.current.find(o => o.i === initialScrollTarget)
-          if (target) {
-            requestAnimationFrame(() => {
-              v.scrollTo({ top: target.wrap.offsetTop - 16, behavior: 'instant' })
-            })
-          }
-        }
+        // Rede de segurança: se por algum motivo não rolou durante a montagem.
+        // Vem antes do carregamento de anotações de propósito — abrir na peça
+        // errada é falha que o músico percebe na hora, e não pode depender de
+        // nada que venha depois dar certo.
+        goToTarget()
 
         // Load annotations
         try {
@@ -278,7 +304,6 @@ export default function Reader({
         renderPage(2)
       } catch (e) {
         console.error('buildViewer', e)
-        builtKeyRef.current = null
       }
     })()
 
@@ -292,7 +317,7 @@ export default function Reader({
       for (const id of myPins) unpinDoc(id)
       myPins.length = 0
     }
-  }, [scoreId, scoreType, fitMode, getBuffer, isPlaylist, playlistScores])
+  }, [buildKey])
 
   function renderPage(i) {
     const obj = wrappersRef.current[i - 1]
@@ -707,7 +732,7 @@ export default function Reader({
     let timer
     const onResize = () => {
       clearTimeout(timer)
-      timer = setTimeout(() => { builtKeyRef.current = null; setCurrentPage(p => p) }, 250)
+      timer = setTimeout(() => setResizeNonce(n => n + 1), 250)
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
